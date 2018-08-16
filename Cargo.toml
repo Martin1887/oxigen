@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+	"oxigen",
+	"nqueens-oxigen"
+]

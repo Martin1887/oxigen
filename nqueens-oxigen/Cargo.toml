@@ -1,0 +1,8 @@
+[package]
+name = "nqueens-oxigen"
+version = "0.1.0"
+authors = ["Martin1887 <marcos.martin.pozo.delgado@gmail.com>"]
+
+[dependencies]
+rand = "0.5"
+oxigen = { path = "../oxigen" }
