@@ -6,7 +6,8 @@ use genotype::Genotype;
 /// This trait defines the kill function used to remove individuals at the end of a generation.
 pub trait SurvivalPressure<T, G: Genotype<T>>: Send + Sync {
     /// Returns the indexes of the individuals to be deleted according to the population size,
-    /// the population and the fitness of the population.
+    /// the population and the fitness of the population. Population and fitness are sorted
+    /// from bigger to lower fitness.
     fn kill(&self, population_size: usize, population: &[Box<G>], fitnesses: &[f64]) -> Vec<usize>;
 }
 

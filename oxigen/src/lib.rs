@@ -1,5 +1,6 @@
-//! This crate provides functions for parallel genetic algorithm.
+//! This crate provides functions for parallel genetic algorithm execution.
 
+extern crate historian;
 extern crate rand;
 extern crate rayon;
 
@@ -24,10 +25,38 @@ pub use slope_params::*;
 pub use stop_criteria::*;
 pub use survival_pressure::*;
 
+use historian::Histo;
 use rand::distributions::{Standard, Uniform};
 use rand::prelude::*;
 use rayon::prelude::*;
+use std::fs::File;
+use std::io::prelude::*;
 use std::sync::mpsc::channel;
+
+const POPULATION_SEPARATOR: &[u8] = b"\n\n\n\n---------------------------------\n\n\n\n";
+const POPULATION_ERR_MSG: &str = "Error writing on population log file";
+const PROGRESS_ERR_MSG: &str = "Error writing in progress log file";
+const PROGRESS_HEADER: &[u8] = b"Generation\t\
+    Solutions\t\
+    Last progress\t\
+    Progress avg\t\
+    Progress std\t\
+    Progress max\t\
+    Progress min\t\
+    Progress p10\t\
+    Progress p25\t\
+    Progress median\t\
+    Progress p75\t\
+    Progress p90\t\
+    Fitness avg\t\
+    Fitness std\t\
+    Fitness max\t\
+    Fitness min\t\
+    Fitness p10\t\
+    Fitness p25\t\
+    Fitness median\t\
+    Fitness p75\t\
+    Fitness p90\n";
 
 /// Struct that defines a genetic algorithm execution.
 pub struct GeneticExecution<T, Ind: Genotype<T>> {
@@ -53,6 +82,10 @@ pub struct GeneticExecution<T, Ind: Genotype<T>> {
     stop_criterion: Box<StopCriterion>,
     /// Cache fitness value of individuals or compute it in each iteration.
     cache_fitness: bool,
+    /// Progress log, writes statistics of the population every certain number of generations.
+    progress_log: (u64, Option<File>),
+    /// Population log, writes the population and fitnesses every certain number of generations.
+    population_log: (u64, Option<File>),
     /// Vector with the fitness cache of all individuals.
     fitnesses: Vec<Option<Fitness>>,
 }
@@ -78,6 +111,8 @@ impl<T, Ind: Genotype<T>> Default for GeneticExecution<T, Ind> {
             survival_pressure: Box::new(SurvivalPressureFunctions::Worst),
             stop_criterion: Box::new(StopCriteria::SolutionFound),
             cache_fitness: true,
+            progress_log: (0, None),
+            population_log: (0, None),
             fitnesses: vec![None; 64],
         }
     }
@@ -150,6 +185,18 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         self
     }
 
+    /// Sets the progress log.
+    pub fn progress_log(mut self, generations: u64, log_file: File) -> Self {
+        self.progress_log = (generations, Some(log_file));
+        self
+    }
+
+    /// Sets the progress log.
+    pub fn population_log(mut self, generations: u64, log_file: File) -> Self {
+        self.population_log = (generations, Some(log_file));
+        self
+    }
+
     /// Run the genetic algorithm executiion until the `stop_criterion` is satisfied.
     ///
     /// # Returns
@@ -171,6 +218,10 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         for _ind in 0..self.population_size {
             self.population
                 .push(Box::new(Ind::generate(&self.genotype_size)));
+        }
+
+        if self.progress_log.0 > 0 {
+            self.print_progress_header();
         }
 
         while !self.stop_criterion.stop(
@@ -203,10 +254,24 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             current_fitnesses = self.get_fitnesses();
             self.survival_pressure_kill(&current_fitnesses);
 
+            current_fitnesses = self.get_fitnesses();
             solutions = self.get_solutions(&current_fitnesses);
             let best = current_fitnesses[0];
             progress = Self::update_progress(last_best, best, &mut last_progresses);
             last_best = best;
+
+            if self.progress_log.0 > 0 && generation % self.progress_log.0 == 0 {
+                self.print_progress(
+                    generation,
+                    &current_fitnesses,
+                    progress,
+                    &last_progresses,
+                    solutions.len(),
+                );
+            }
+            if self.population_log.0 > 0 && generation % self.population_log.0 == 0 {
+                self.print_population(generation);
+            }
         }
 
         let mut final_solutions: Vec<Box<Ind>> = Vec::new();
@@ -214,6 +279,99 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             final_solutions.push(self.population[i].clone());
         }
         (final_solutions, generation, progress)
+    }
+
+    fn print_population(&mut self, generation: u64) {
+        if let Some(ref mut f) = self.population_log.1 {
+            f.write_all(format!("Generation {}\n", generation).as_bytes())
+                .expect(POPULATION_ERR_MSG);
+            for (i, ind) in self.population.iter().enumerate() {
+                f.write_all(
+                    format!(
+                        "Individual: {}; fitness: {}\n\n",
+                        i,
+                        self.fitnesses[i].unwrap().fitness
+                    ).as_bytes(),
+                ).expect(POPULATION_ERR_MSG);
+                f.write_all(format!("{}", ind).as_bytes())
+                    .expect(POPULATION_ERR_MSG);
+            }
+            f.write_all(POPULATION_SEPARATOR).expect(POPULATION_ERR_MSG);
+        }
+    }
+
+    fn print_progress_header(&mut self) {
+        if let Some(ref mut f) = self.progress_log.1 {
+            f.write_all(PROGRESS_HEADER).expect(PROGRESS_ERR_MSG);
+        }
+    }
+
+    fn print_progress(
+        &mut self,
+        generation: u64,
+        current_fitnesses: &[f64],
+        progress: f64,
+        last_progresses: &[f64],
+        n_solutions: usize,
+    ) {
+        if let Some(ref mut f) = self.progress_log.1 {
+            let mut progress_hist = Histo::default();
+            for prog in last_progresses.iter() {
+                progress_hist.measure(*prog);
+            }
+            let mut fit_hist = Histo::default();
+            for fit in current_fitnesses.iter() {
+                fit_hist.measure(*fit);
+            }
+            let fitness_avg =
+                current_fitnesses.iter().sum::<f64>() / current_fitnesses.len() as f64;
+            f.write_all(
+                format!(
+                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+                    generation,
+                    n_solutions,
+                    last_progresses[last_progresses.len() - 1],
+                    progress,
+                    (1_f64 / (last_progresses.len() - 1) as f64)
+                        * last_progresses
+                            .iter()
+                            .fold(0_f64, |acc, x| acc + (x - progress).powi(2))
+                            .sqrt(),
+                    last_progresses
+                        .iter()
+                        .max_by(|x, y| x.partial_cmp(&y).unwrap())
+                        .unwrap(),
+                    last_progresses
+                        .iter()
+                        .min_by(|x, y| x.partial_cmp(&y).unwrap())
+                        .unwrap(),
+                    progress_hist.percentile(10_f64),
+                    progress_hist.percentile(25_f64),
+                    progress_hist.percentile(50_f64),
+                    progress_hist.percentile(75_f64),
+                    progress_hist.percentile(90_f64),
+                    fitness_avg,
+                    (1_f64 / (current_fitnesses.len() - 1) as f64)
+                        * current_fitnesses
+                            .iter()
+                            .fold(0_f64, |acc, x| acc + (x - fitness_avg).powi(2))
+                            .sqrt(),
+                    current_fitnesses
+                        .iter()
+                        .max_by(|x, y| x.partial_cmp(&y).unwrap())
+                        .unwrap(),
+                    current_fitnesses
+                        .iter()
+                        .min_by(|x, y| x.partial_cmp(&y).unwrap())
+                        .unwrap(),
+                    fit_hist.percentile(10_f64),
+                    fit_hist.percentile(25_f64),
+                    fit_hist.percentile(50_f64),
+                    fit_hist.percentile(75_f64),
+                    fit_hist.percentile(90_f64),
+                ).as_bytes(),
+            ).expect(PROGRESS_ERR_MSG);
+        }
     }
 
     fn update_progress(last_best: f64, best: f64, last_progresses: &mut Vec<f64>) -> f64 {

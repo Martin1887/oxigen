@@ -9,14 +9,16 @@ oxigen provides the following features:
 * Customizable age unfitness of individuals, with no unfitness, linear and cuadratic unfitness with threshold according to generations of the individual built-in (you can implement your own age functions via the `Age` trait).
 * Accumulated `Roulette`, `Tournaments` and `Cup` built-in selection functions (you can implement your own selection functions via the `Selection` trait).
 * `SingleCrossPoint` built-in crossover function (you can implement your own crossover function via the `Crossover` trait).
-* `Worst` built-in survival pressure function (the worst individuals are killed until reach the original population size). You can implement your own survival pressure functions via the `SurvivalPressure` trait.
+* `Worst` built-in survival pressure function (the worst individuals are killed until reaching the original population size). You can implement your own survival pressure functions via the `SurvivalPressure` trait.
 * `SolutionFound`, `Generation` and `Progress` built-in stop criteria (you can implement your own stop criteria via the `StopCriterion` trait).
 * `Genotype` trait to define the genotype of your genetic algorithm. Whatever struct can implement the `Genotype` trait under the following restrictions:
     - It has a `iter` function that returns a `use std::slice::Iter` over its genes.
     - It has a 'into_iter' function that consumes the individual and returns a ' use std::vec::IntoIter' over its genes.
     - It implements `FromIterator` over its genes type, `Display`, `Clone`, `Send` and `Sync`.
     - It has functions to `generate` a random individual, to `mutate` an individual, to get the `fitness` of an individual and to know if and individual `is_solution` of the problem.
-
+* Individual's fitness is cached to not do unnecessary recomputations (this can be disabled with `.cache_fitness(false)` if your fitness function is stochastic and so you need to recompute fitness in each generation).
+* Progress statistics can be configured to be printed every certain number of generations to a file.
+* Population individuals with their fitnesses can be configured to be printed every certain number of generations to a file.
 
 
 ## Usage
@@ -29,19 +31,22 @@ let n_queens: u8 = std::env::args()
     .expect("Enter a number between 4 and 255 as argument")
     .parse()
     .expect("Enter a number between 4 and 255 as argument");
-let log = (f64::from(n_queens) * 4_f64).log2().ceil();
-let population_size = 2_i32.pow(log as u32) as usize;
+let progress_log = File::create("progress.csv").expect("Error creating progress log file");
+let population_log =
+    File::create("population.txt").expect("Error creating population log file");
+let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+let population_size = 2_i32.pow(log2 as u32) as usize;
 let (solutions, generation, progress) = GeneticExecution::<u8, QueensBoard>::new()
     .population_size(population_size)
     .genotype_size(n_queens as u8)
     .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
-        start: f64::from(n_queens) / (8_f64 + 2_f64 * log) / 100_f64,
+        start: f64::from(n_queens) / (8_f64 + 2_f64 * log2) / 100_f64,
         bound: 0.005,
         coefficient: -0.0002,
     })))
     .selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
-        start: log - 2_f64,
-        bound: log / 1.5,
+        start: log2 - 2_f64,
+        bound: log2 / 1.5,
         coefficient: -0.0005,
     })))
     .select_function(Box::new(SelectionFunctions::Cup))
@@ -49,6 +54,8 @@ let (solutions, generation, progress) = GeneticExecution::<u8, QueensBoard>::new
         AgeThreshold(50),
         AgeSlope(1_f64),
     )))
+    .progress_log(20, progress_log)
+    .population_log(2000, population_log)
     .run();
 ```
 

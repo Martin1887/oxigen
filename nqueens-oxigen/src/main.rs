@@ -5,6 +5,7 @@ use oxigen::prelude::*;
 use rand::distributions::Uniform;
 use rand::prelude::*;
 use std::fmt::Display;
+use std::fs::File;
 use std::iter::FromIterator;
 
 #[derive(Clone)]
@@ -121,19 +122,22 @@ fn main() {
         .expect("Enter a number between 4 and 255 as argument")
         .parse()
         .expect("Enter a number between 4 and 255 as argument");
-    let log = (f64::from(n_queens) * 4_f64).log2().ceil();
-    let population_size = 2_i32.pow(log as u32) as usize;
+    let progress_log = File::create("progress.csv").expect("Error creating progress log file");
+    let population_log =
+        File::create("population.txt").expect("Error creating population log file");
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
     let (solutions, generation, progress) = GeneticExecution::<u8, QueensBoard>::new()
         .population_size(population_size)
         .genotype_size(n_queens as u8)
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
-            start: f64::from(n_queens) / (8_f64 + 2_f64 * log) / 100_f64,
+            start: f64::from(n_queens) / (8_f64 + 2_f64 * log2) / 100_f64,
             bound: 0.005,
             coefficient: -0.0002,
         })))
         .selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
-            start: log - 2_f64,
-            bound: log / 1.5,
+            start: log2 - 2_f64,
+            bound: log2 / 1.5,
             coefficient: -0.0005,
         })))
         .select_function(Box::new(SelectionFunctions::Cup))
@@ -141,6 +145,8 @@ fn main() {
             AgeThreshold(50),
             AgeSlope(1_f64),
         )))
+        .progress_log(20, progress_log)
+        .population_log(2000, population_log)
         .run();
 
     println!(

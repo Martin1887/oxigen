@@ -4,5 +4,6 @@ version = "0.1.0"
 authors = ["Martin1887 <marcos.martin.pozo.delgado@gmail.com>"]
 
 [dependencies]
+historian = "3.0"
 rand = "0.5"
 rayon = "1.0"
