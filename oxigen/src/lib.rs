@@ -387,66 +387,53 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     }
 
     fn compute_fitnesses(&mut self, refresh_on_nocache: bool) -> Vec<f64> {
-        let (sender_fit, receiver_fit) = channel();
-        let (sender_age, receiver_age) = channel();
+        let age_function = &self.age;
         if self.cache_fitness || !refresh_on_nocache {
             self.population
-                .par_iter()
-                .enumerate()
-                .filter(|(_i, ind)| ind.1.is_none())
-                .for_each_with(sender_fit, |s, (i, ind)| {
+                .par_iter_mut()
+                .filter(|ind| ind.1.is_none())
+                .for_each(|ind| {
                     let new_fit_value = ind.0.fitness();
-                    s.send((i, 0, new_fit_value, new_fit_value)).unwrap();
+                    ind.1 = Some(Fitness {
+                        age: 0,
+                        fitness: new_fit_value,
+                        original_fitness: new_fit_value,
+                    });
                 });
             self.population
-                .par_iter()
-                .enumerate()
-                .filter(|(_i, ind)| ind.1.is_some())
-                .map(|(i, ind)| (i, ind.1.unwrap()))
-                .for_each_with(sender_age, |s, (i, fit)| {
-                    let mut new_fit_value = fit.original_fitness;
-                    let age_exceed: i64 = fit.age as i64 - self.age.age_threshold() as i64;
+                .par_iter_mut()
+                .filter(|ind| ind.1.is_some())
+                .map(|ind| ind.1.unwrap())
+                .for_each(|mut fit| {
+                    let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
                     if age_exceed > 0 {
-                        new_fit_value = self.age.age_unfitness(age_exceed as u64, new_fit_value);
+                        fit.fitness =
+                            age_function.age_unfitness(age_exceed as u64, fit.original_fitness);
                     }
-                    s.send((i, fit.age, new_fit_value, fit.original_fitness))
-                        .unwrap();
                 });
         } else {
-            self.population
-                .par_iter()
-                .enumerate()
-                .for_each_with(sender_fit, |s, (i, ind)| {
-                    let mut new_fit_value = ind.0.fitness();
-                    let age: u64 = if ind.1.is_some() {
-                        ind.1.unwrap().age
-                    } else {
-                        0
-                    };
-                    let age_exceed: i64 = age as i64 - self.age.age_threshold() as i64;
-                    if age_exceed > 0 {
-                        new_fit_value = self.age.age_unfitness(age_exceed as u64, new_fit_value);
+            self.population.par_iter_mut().for_each(|ind| {
+                let mut new_fit_value = ind.0.fitness();
+                match ind.1 {
+                    Some(mut fit) => {
+                        let age: u64 = fit.age;
+                        let age_exceed: i64 = age as i64 - age_function.age_threshold() as i64;
+                        if age_exceed > 0 {
+                            new_fit_value =
+                                age_function.age_unfitness(age_exceed as u64, new_fit_value);
+                        }
+                        fit.fitness = new_fit_value;
                     }
-                    s.send((i, age, new_fit_value, 0_f64)).unwrap();
-                });
-        }
-        for (i, age, fit, orig_fit) in receiver_fit {
-            self.population[i].1 = Some(Fitness {
-                age: age + refresh_on_nocache as u64,
-                fitness: fit,
-                original_fitness: orig_fit,
+                    None => {
+                        ind.1 = Some(Fitness {
+                            age: 0,
+                            fitness: new_fit_value,
+                            original_fitness: new_fit_value,
+                        })
+                    }
+                }
             });
         }
-        if self.cache_fitness || !refresh_on_nocache {
-            for (i, age, fit, orig_fit) in receiver_age {
-                self.population[i].1 = Some(Fitness {
-                    age: age + refresh_on_nocache as u64,
-                    fitness: fit,
-                    original_fitness: orig_fit,
-                });
-            }
-        }
-
         self.get_fitnesses()
     }
 
