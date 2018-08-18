@@ -4,7 +4,7 @@ oxigen is a parallel genetic algorithm library implemented in Rust. The name com
 
 oxigen provides the following features:
 
-* Fast and parallel genetic algorithm implementation (it solves the N Queens problem in a few seconds).
+* Fast and parallel genetic algorithm implementation (it solves the N Queens problem for N=255 in few seconds). For benchmarks view benchmarks section of this file.
 * Customizable mutation and selection rates with constant, linear and cuadratic functions according to generations built-in (you can implement your own functions via the `MutationRate` and `SelectionRate` traits).
 * Customizable age unfitness of individuals, with no unfitness, linear and cuadratic unfitness with threshold according to generations of the individual built-in (you can implement your own age functions via the `Age` trait).
 * Accumulated `Roulette`, `Tournaments` and `Cup` built-in selection functions (you can implement your own selection functions via the `Selection` trait).
@@ -71,6 +71,42 @@ To build oxigen, use `cargo` like for any Rust project:
 * `cargo build` to build in debug mode.
 * `cargo build --release` to build with optimizations.
 
+To run benchmarks, you will need a nightly Rust compiler. Uncomment the lines `// #![feature(test)]` and `// mod tests;` from `lib.rs` and then bechmarks can be run using `cargo bench`.
+
+
+## Benchmarks
+
+The following benchmarks have been created to measure the genetic algorithm functions performance:
+
+```
+running 14 tests
+test tests::bench_cross                  ... bench:      33,192 ns/iter (+/- 10,847)
+test tests::bench_cup                    ... bench:     319,823 ns/iter (+/- 91,331)
+test tests::bench_fitness                ... bench:     547,453 ns/iter (+/- 111,564)
+test tests::bench_fitness_age            ... bench:      44,959 ns/iter (+/- 5,206)
+test tests::bench_get_fitness            ... bench:      17,015 ns/iter (+/- 2,185)
+test tests::bench_get_solutions          ... bench:      32,714 ns/iter (+/- 3,604)
+test tests::bench_mutation               ... bench:           7 ns/iter (+/- 0)
+test tests::bench_not_cached_fitness     ... bench:     532,210 ns/iter (+/- 97,308)
+test tests::bench_not_cached_fitness_age ... bench:     532,407 ns/iter (+/- 81,423)
+test tests::bench_roulette               ... bench:     281,544 ns/iter (+/- 10,570)
+test tests::bench_sort_population        ... bench:       1,485 ns/iter (+/- 58)
+test tests::bench_survival_pressure      ... bench:          20 ns/iter (+/- 0)
+test tests::bench_tournaments            ... bench:     964,301 ns/iter (+/- 127,458)
+test tests::bench_update_progress        ... bench:       5,779 ns/iter (+/- 286)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 14 measured; 0 filtered out
+```
+
+The difference of performance among the different fitness benchmarks have the following explanations:
+
+ * `bench_fitness` measures the performance of a cached execution cleaning the fitnesses after each bench iteration. This cleaning is the reason of being a bit slower than not cached benchmarks.
+ * `bench_fitness_age` measures the performance with fitness cached in all bench iterations, so it is very much faster.
+ * Not cached benchmarks measure the performance of not cached executions, with 1 generation individuals in the last case, so the performance is similar but a bit slower for the benchmark that must apply age unfitness.
+
+
+ The `bench_tournaments` is slower than cup and roulette because it has been configured with `population_size / 2` tournaments of the same size of individuals. In practice, a configuration like this is only used in the last generations of the algorithm where the selection rate is high, being very much faster in the previous generations.
+
 
 ## Contributing
 
@@ -92,7 +128,7 @@ code you contribute must be:
   * **Styled:** Your code should be `rustfmt`'d when possible.
   * **Simple:** Your code should accomplish its task as simply and
      idiomatically as possible.
-  * **Tested:** You must add (and pass) convincing tests for any functionality you add.
+  * **Tested:** You should add (and pass) convincing tests for any functionality you add when it is possible.
   * **Focused:** Your code should do what it's supposed to do and nothing more.
 
 Note that unless you

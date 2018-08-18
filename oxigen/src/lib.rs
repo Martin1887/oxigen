@@ -1,6 +1,6 @@
 //! This crate provides functions for parallel genetic algorithm execution.
 
-#![feature(test)]
+// #![feature(test)]
 
 extern crate historian;
 extern crate rand;
@@ -16,7 +16,7 @@ pub mod selection_rate;
 pub mod slope_params;
 pub mod stop_criteria;
 pub mod survival_pressure;
-mod tests;
+// mod tests;
 
 pub use age::*;
 pub use crossover::*;
