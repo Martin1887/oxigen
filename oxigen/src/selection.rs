@@ -55,20 +55,16 @@ impl Selection for SelectionFunctions {
             }
             Tournaments(n_tournaments) => {
                 let (sender, receiver) = channel();
-                let mut rgen = SmallRng::from_entropy();
-                let randoms: Vec<usize> = Uniform::from(0..selection_rate)
-                    .sample_iter(&mut rgen)
-                    .take(n_tournaments.0 * selection_rate)
-                    .collect();
                 let mut winners = Vec::with_capacity(n_tournaments.0);
                 Range {
                     start: 0,
                     end: n_tournaments.0,
                 }.into_par_iter()
-                    .for_each_with(sender, |s, t| {
+                    .for_each_with(sender, |s, _t| {
+                        let mut rgen = SmallRng::from_entropy();
                         let mut fighters = Vec::with_capacity(selection_rate);
-                        for f in 0..selection_rate {
-                            let sel = randoms[t * selection_rate + f];
+                        for _f in 0..selection_rate {
+                            let sel = rgen.sample(Uniform::from(0..selection_rate));
                             fighters.push((sel, fitnesses[sel]));
                         }
                         s.send(
