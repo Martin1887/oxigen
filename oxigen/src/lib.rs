@@ -1,5 +1,7 @@
 //! This crate provides functions for parallel genetic algorithm execution.
 
+#![feature(test)]
+
 extern crate historian;
 extern crate rand;
 extern crate rayon;
@@ -14,6 +16,7 @@ pub mod selection_rate;
 pub mod slope_params;
 pub mod stop_criteria;
 pub mod survival_pressure;
+mod tests;
 
 pub use age::*;
 pub use crossover::*;
@@ -437,12 +440,14 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 original_fitness: orig_fit,
             });
         }
-        for (i, age, fit, orig_fit) in receiver_age {
-            self.fitnesses[i] = Some(Fitness {
-                age: age + refresh_on_nocache as u64,
-                fitness: fit,
-                original_fitness: orig_fit,
-            });
+        if self.cache_fitness || !refresh_on_nocache {
+            for (i, age, fit, orig_fit) in receiver_age {
+                self.fitnesses[i] = Some(Fitness {
+                    age: age + refresh_on_nocache as u64,
+                    fitness: fit,
+                    original_fitness: orig_fit,
+                });
+            }
         }
 
         self.get_fitnesses()
