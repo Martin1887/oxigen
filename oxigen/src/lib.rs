@@ -65,8 +65,8 @@ const PROGRESS_HEADER: &[u8] = b"Generation\t\
 pub struct GeneticExecution<T, Ind: Genotype<T>> {
     /// The number of individuals in the population.
     population_size: usize,
-    /// Population with all individuals.
-    population: Vec<Box<Ind>>,
+    /// Population with all individuals and their respective fitnesses.
+    population: Vec<(Box<Ind>, Option<Fitness>)>,
     /// Size of the genotype problem.
     genotype_size: Ind::ProblemSize,
     /// The mutation rate variation along iterations and progress.
@@ -89,12 +89,10 @@ pub struct GeneticExecution<T, Ind: Genotype<T>> {
     progress_log: (u64, Option<File>),
     /// Population log, writes the population and fitnesses every certain number of generations.
     population_log: (u64, Option<File>),
-    /// Vector with the fitness cache of all individuals.
-    fitnesses: Vec<Option<Fitness>>,
 }
 
 #[derive(Copy, Clone)]
-struct Fitness {
+pub struct Fitness {
     age: u64,
     fitness: f64,
     original_fitness: f64,
@@ -116,7 +114,6 @@ impl<T, Ind: Genotype<T>> Default for GeneticExecution<T, Ind> {
             cache_fitness: true,
             progress_log: (0, None),
             population_log: (0, None),
-            fitnesses: vec![None; 64],
         }
     }
 }
@@ -130,7 +127,6 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     /// Sets the population size.
     pub fn population_size(mut self, new_pop: usize) -> Self {
         self.population_size = new_pop;
-        self.fitnesses = vec![None; new_pop];
         self
     }
 
@@ -220,7 +216,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         // Initialize randomly the population
         for _ind in 0..self.population_size {
             self.population
-                .push(Box::new(Ind::generate(&self.genotype_size)));
+                .push((Box::new(Ind::generate(&self.genotype_size)), None));
         }
 
         if self.progress_log.0 > 0 {
@@ -279,7 +275,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
 
         let mut final_solutions: Vec<Box<Ind>> = Vec::new();
         for i in solutions {
-            final_solutions.push(self.population[i].clone());
+            final_solutions.push(self.population[i].0.clone());
         }
         (final_solutions, generation, progress)
     }
@@ -290,13 +286,10 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 .expect(POPULATION_ERR_MSG);
             for (i, ind) in self.population.iter().enumerate() {
                 f.write_all(
-                    format!(
-                        "Individual: {}; fitness: {}\n\n",
-                        i,
-                        self.fitnesses[i].unwrap().fitness
-                    ).as_bytes(),
+                    format!("Individual: {}; fitness: {}\n\n", i, ind.1.unwrap().fitness)
+                        .as_bytes(),
                 ).expect(POPULATION_ERR_MSG);
-                f.write_all(format!("{}", ind).as_bytes())
+                f.write_all(format!("{}", ind.0).as_bytes())
                     .expect(POPULATION_ERR_MSG);
             }
             f.write_all(POPULATION_SEPARATOR).expect(POPULATION_ERR_MSG);
@@ -387,9 +380,9 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     }
 
     fn get_fitnesses(&self) -> Vec<f64> {
-        self.fitnesses
+        self.population
             .par_iter()
-            .map(|f| f.unwrap().fitness)
+            .map(|f| f.1.unwrap().fitness)
             .collect::<Vec<f64>>()
     }
 
@@ -397,19 +390,19 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         let (sender_fit, receiver_fit) = channel();
         let (sender_age, receiver_age) = channel();
         if self.cache_fitness || !refresh_on_nocache {
-            self.fitnesses
+            self.population
                 .par_iter()
                 .enumerate()
-                .filter(|(_i, fit)| fit.is_none())
-                .for_each_with(sender_fit, |s, (i, _fit)| {
-                    let new_fit_value = self.population[i].fitness();
+                .filter(|(_i, ind)| ind.1.is_none())
+                .for_each_with(sender_fit, |s, (i, ind)| {
+                    let new_fit_value = ind.0.fitness();
                     s.send((i, 0, new_fit_value, new_fit_value)).unwrap();
                 });
-            self.fitnesses
+            self.population
                 .par_iter()
                 .enumerate()
-                .filter(|(_i, fit)| fit.is_some())
-                .map(|(i, fit)| (i, fit.unwrap()))
+                .filter(|(_i, ind)| ind.1.is_some())
+                .map(|(i, ind)| (i, ind.1.unwrap()))
                 .for_each_with(sender_age, |s, (i, fit)| {
                     let mut new_fit_value = fit.original_fitness;
                     let age_exceed: i64 = fit.age as i64 - self.age.age_threshold() as i64;
@@ -420,12 +413,16 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                         .unwrap();
                 });
         } else {
-            self.fitnesses
+            self.population
                 .par_iter()
                 .enumerate()
-                .for_each_with(sender_fit, |s, (i, fit)| {
-                    let mut new_fit_value = self.population[i].fitness();
-                    let age: u64 = if fit.is_some() { fit.unwrap().age } else { 0 };
+                .for_each_with(sender_fit, |s, (i, ind)| {
+                    let mut new_fit_value = ind.0.fitness();
+                    let age: u64 = if ind.1.is_some() {
+                        ind.1.unwrap().age
+                    } else {
+                        0
+                    };
                     let age_exceed: i64 = age as i64 - self.age.age_threshold() as i64;
                     if age_exceed > 0 {
                         new_fit_value = self.age.age_unfitness(age_exceed as u64, new_fit_value);
@@ -434,7 +431,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 });
         }
         for (i, age, fit, orig_fit) in receiver_fit {
-            self.fitnesses[i] = Some(Fitness {
+            self.population[i].1 = Some(Fitness {
                 age: age + refresh_on_nocache as u64,
                 fitness: fit,
                 original_fitness: orig_fit,
@@ -442,7 +439,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         }
         if self.cache_fitness || !refresh_on_nocache {
             for (i, age, fit, orig_fit) in receiver_age {
-                self.fitnesses[i] = Some(Fitness {
+                self.population[i].1 = Some(Fitness {
                     age: age + refresh_on_nocache as u64,
                     fitness: fit,
                     original_fitness: orig_fit,
@@ -461,7 +458,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             .par_iter()
             .enumerate()
             .for_each_with(sender, |s, (i, ind)| {
-                if ind.is_solution(current_fitnesses[i]) {
+                if ind.0.is_solution(current_fitnesses[i]) {
                     s.send(i).unwrap();
                 }
             });
@@ -488,36 +485,28 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                     ind2 = SmallRng::from_entropy().sample(Uniform::from(0..selected.len()));
                 }
                 let (crossed1, crossed2) = self.crossover.cross(
-                    &self.population[selected[ind1]],
-                    &self.population[selected[ind2]],
+                    &self.population[selected[ind1]].0,
+                    &self.population[selected[ind2]].0,
                 );
                 s.send(crossed1).unwrap();
                 s.send(crossed2).unwrap();
             });
         for child in receiver {
-            self.population.push(Box::new(child));
-            self.fitnesses.push(None);
+            self.population.push((Box::new(child), None));
         }
     }
 
     fn mutate(&mut self, mutation_rate: f64) {
-        let (sender, receiver) = channel();
-        self.population
-            .par_iter_mut()
-            .enumerate()
-            .for_each_with(sender, |s, (i, individual)| {
-                let mut rgen = SmallRng::from_entropy();
-                for gen in 0..individual.iter().len() {
-                    let random: f64 = rgen.sample(Standard);
-                    if random < mutation_rate {
-                        individual.mutate(&mut rgen, gen);
-                        s.send(i).unwrap();
-                    }
+        self.population.par_iter_mut().for_each(|individual| {
+            let mut rgen = SmallRng::from_entropy();
+            for gen in 0..individual.0.iter().len() {
+                let random: f64 = rgen.sample(Standard);
+                if random < mutation_rate {
+                    individual.0.mutate(&mut rgen, gen);
+                    individual.1 = None;
                 }
-            });
-        for ind in receiver {
-            self.fitnesses[ind] = None;
-        }
+            }
+        });
     }
 
     fn survival_pressure_kill(&mut self, current_fitnesses: &[f64]) {
@@ -526,42 +515,17 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 .kill(self.population_size, &self.population, current_fitnesses)
         {
             self.population.remove(killed);
-            self.fitnesses.remove(killed);
         }
     }
 
     fn sort_population(&mut self) {
-        Self::quick_sort(&mut self.population, &mut self.fitnesses);
-    }
-
-    fn quick_sort<I: Send>(v: &mut [I], fitnesses: &mut [Option<Fitness>]) {
-        let mid = Self::quick_sort_partition(v, fitnesses);
-        let (lo, hi) = v.split_at_mut(mid);
-        let (lo_f, hi_f) = fitnesses.split_at_mut(mid);
-        if lo_f.len() > 1 && hi_f.len() > 1 {
-            rayon::join(|| Self::quick_sort(lo, lo_f), || Self::quick_sort(hi, hi_f));
-        } else if lo_f.len() > 1 {
-            Self::quick_sort(lo, lo_f)
-        } else if hi_f.len() > 1 {
-            Self::quick_sort(hi, hi_f)
-        }
-    }
-
-    // Partition rearranges all items `>=` to the pivot item (arbitrary selected to be
-    // the last item in the slice) to the first half of the slice. It then returns the
-    // "dividing point" where the pivot is placed.
-    fn quick_sort_partition<I: Send>(v: &mut [I], fitnesses: &mut [Option<Fitness>]) -> usize {
-        let pivot = fitnesses.len() - 1;
-        let mut i = 0;
-        for j in 0..pivot {
-            if fitnesses[j].unwrap().fitness >= fitnesses[pivot].unwrap().fitness {
-                v.swap(i, j);
-                fitnesses.swap(i, j);
-                i += 1;
-            }
-        }
-        v.swap(i, pivot);
-        fitnesses.swap(i, pivot);
-        i
+        // Self::quick_sort(&mut self.population, &mut self.fitnesses);
+        self.population.par_sort_unstable_by(|el1, el2| {
+            el2.1
+                .unwrap()
+                .fitness
+                .partial_cmp(&el1.1.unwrap().fitness)
+                .unwrap()
+        });
     }
 }
