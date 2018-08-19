@@ -1,7 +1,7 @@
 extern crate test;
 
 #[allow(unused_imports)]
-use tests::test::Bencher;
+use benchmarks::test::Bencher;
 
 use super::prelude::*;
 use rand::distributions::Uniform;
@@ -340,7 +340,7 @@ fn bench_fitness_age(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_get_fitness(b: &mut Bencher) {
+fn bench_get_fitnesses(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;

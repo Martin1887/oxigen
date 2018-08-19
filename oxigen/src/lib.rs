@@ -7,6 +7,7 @@ extern crate rand;
 extern crate rayon;
 
 pub mod age;
+// mod benchmarks;
 pub mod crossover;
 pub mod genotype;
 pub mod mutation_rate;
@@ -16,7 +17,6 @@ pub mod selection_rate;
 pub mod slope_params;
 pub mod stop_criteria;
 pub mod survival_pressure;
-// mod tests;
 
 pub use age::*;
 pub use crossover::*;
@@ -449,8 +449,8 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                     s.send(i).unwrap();
                 }
             });
-        for child in receiver {
-            solutions.push(child);
+        for sol in receiver {
+            solutions.push(sol);
         }
 
         solutions
