@@ -405,9 +405,9 @@ fn bench_get_solutions(b: &mut Bencher) {
             None,
         ));
     }
-    let current_fitnesses = gen_exec.compute_fitnesses(true);
+    gen_exec.compute_fitnesses(true);
     b.iter(|| {
-        gen_exec.get_solutions(&current_fitnesses);
+        gen_exec.get_solutions();
     });
 }
 
@@ -428,9 +428,9 @@ fn bench_survival_pressure(b: &mut Bencher) {
             None,
         ));
     }
-    let current_fitnesses = gen_exec.compute_fitnesses(true);
+    gen_exec.compute_fitnesses(true);
     b.iter(|| {
-        gen_exec.survival_pressure_kill(&current_fitnesses);
+        gen_exec.survival_pressure_kill();
     });
 }
 

@@ -91,10 +91,14 @@ pub struct GeneticExecution<T, Ind: Genotype<T>> {
     population_log: (u64, Option<File>),
 }
 
+/// Struct that defines the fitness of each individual and the related information.
 #[derive(Copy, Clone)]
 pub struct Fitness {
+    /// Age of the individual.
     age: u64,
+    /// Actual fitness.
     fitness: f64,
+    /// Original fitness of the individual before being unfitnessed by age.
     original_fitness: f64,
 }
 
@@ -250,23 +254,16 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             self.mutate(mutation_rate);
             self.compute_fitnesses(false);
             self.sort_population();
-            current_fitnesses = self.get_fitnesses();
-            self.survival_pressure_kill(&current_fitnesses);
+            self.survival_pressure_kill();
 
             current_fitnesses = self.get_fitnesses();
-            solutions = self.get_solutions(&current_fitnesses);
+            solutions = self.get_solutions();
             let best = current_fitnesses[0];
             progress = Self::update_progress(last_best, best, &mut last_progresses);
             last_best = best;
 
             if self.progress_log.0 > 0 && generation % self.progress_log.0 == 0 {
-                self.print_progress(
-                    generation,
-                    &current_fitnesses,
-                    progress,
-                    &last_progresses,
-                    solutions.len(),
-                );
+                self.print_progress(generation, progress, &last_progresses, solutions.len());
             }
             if self.population_log.0 > 0 && generation % self.population_log.0 == 0 {
                 self.print_population(generation);
@@ -305,18 +302,18 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     fn print_progress(
         &mut self,
         generation: u64,
-        current_fitnesses: &[f64],
         progress: f64,
         last_progresses: &[f64],
         n_solutions: usize,
     ) {
+        let current_fitnesses = self.get_fitnesses();
         if let Some(ref mut f) = self.progress_log.1 {
             let mut progress_hist = Histo::default();
             for prog in last_progresses.iter() {
                 progress_hist.measure(*prog);
             }
             let mut fit_hist = Histo::default();
-            for fit in current_fitnesses.iter() {
+            for fit in &current_fitnesses {
                 fit_hist.measure(*fit);
             }
             let fitness_avg =
@@ -437,7 +434,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         self.get_fitnesses()
     }
 
-    fn get_solutions(&self, current_fitnesses: &[f64]) -> Vec<usize> {
+    fn get_solutions(&self) -> Vec<usize> {
         let mut solutions = Vec::new();
         let (sender, receiver) = channel();
 
@@ -445,7 +442,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             .par_iter()
             .enumerate()
             .for_each_with(sender, |s, (i, ind)| {
-                if ind.0.is_solution(current_fitnesses[i]) {
+                if ind.0.is_solution(ind.1.unwrap().fitness) {
                     s.send(i).unwrap();
                 }
             });
@@ -496,10 +493,10 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         });
     }
 
-    fn survival_pressure_kill(&mut self, current_fitnesses: &[f64]) {
-        for killed in
-            self.survival_pressure
-                .kill(self.population_size, &self.population, current_fitnesses)
+    fn survival_pressure_kill(&mut self) {
+        for killed in self
+            .survival_pressure
+            .kill(self.population_size, &self.population)
         {
             self.population.remove(killed);
         }

@@ -9,12 +9,7 @@ pub trait SurvivalPressure<T, G: Genotype<T>>: Send + Sync {
     /// Returns the indexes of the individuals to be deleted according to the population size,
     /// the population and the fitness of the population. Population and fitness are sorted
     /// from bigger to lower fitness.
-    fn kill(
-        &self,
-        population_size: usize,
-        population: &[(Box<G>, Option<Fitness>)],
-        fitnesses: &[f64],
-    ) -> Vec<usize>;
+    fn kill(&self, population_size: usize, population: &[(Box<G>, Option<Fitness>)]) -> Vec<usize>;
 }
 
 /// Provided survival pressure functions.
@@ -24,12 +19,7 @@ pub enum SurvivalPressureFunctions {
 }
 
 impl<T, G: Genotype<T>> SurvivalPressure<T, G> for SurvivalPressureFunctions {
-    fn kill(
-        &self,
-        population_size: usize,
-        population: &[(Box<G>, Option<Fitness>)],
-        _fitnesses: &[f64],
-    ) -> Vec<usize> {
+    fn kill(&self, population_size: usize, population: &[(Box<G>, Option<Fitness>)]) -> Vec<usize> {
         let mut killed = Vec::with_capacity(population_size / 2);
         let mut i = population.len() - 1;
         while i >= population_size / 2 {

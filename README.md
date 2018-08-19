@@ -80,20 +80,20 @@ The following benchmarks have been created to measure the genetic algorithm func
 
 ```
 running 14 tests
-test tests::bench_cross                  ... bench:      33,192 ns/iter (+/- 10,847)
-test tests::bench_cup                    ... bench:     319,823 ns/iter (+/- 91,331)
-test tests::bench_fitness                ... bench:     547,453 ns/iter (+/- 111,564)
-test tests::bench_fitness_age            ... bench:      44,959 ns/iter (+/- 5,206)
-test tests::bench_get_fitness            ... bench:      17,015 ns/iter (+/- 2,185)
-test tests::bench_get_solutions          ... bench:      32,714 ns/iter (+/- 3,604)
-test tests::bench_mutation               ... bench:           7 ns/iter (+/- 0)
-test tests::bench_not_cached_fitness     ... bench:     532,210 ns/iter (+/- 97,308)
-test tests::bench_not_cached_fitness_age ... bench:     532,407 ns/iter (+/- 81,423)
-test tests::bench_roulette               ... bench:     281,544 ns/iter (+/- 10,570)
-test tests::bench_sort_population        ... bench:       1,485 ns/iter (+/- 58)
-test tests::bench_survival_pressure      ... bench:          20 ns/iter (+/- 0)
-test tests::bench_tournaments            ... bench:     964,301 ns/iter (+/- 127,458)
-test tests::bench_update_progress        ... bench:       5,779 ns/iter (+/- 286)
+test benchmarks::bench_cross                  ... bench:      31,740 ns/iter (+/- 2,106)
+test benchmarks::bench_cup                    ... bench:     319,214 ns/iter (+/- 31,373)
+test benchmarks::bench_fitness                ... bench:     542,184 ns/iter (+/- 31,025)
+test benchmarks::bench_fitness_age            ... bench:      44,545 ns/iter (+/- 2,616)
+test benchmarks::bench_get_fitnesses          ... bench:      16,936 ns/iter (+/- 703)
+test benchmarks::bench_get_solutions          ... bench:      34,221 ns/iter (+/- 1,332)
+test benchmarks::bench_mutation               ... bench:           7 ns/iter (+/- 0)
+test benchmarks::bench_not_cached_fitness     ... bench:     531,058 ns/iter (+/- 2,958)
+test benchmarks::bench_not_cached_fitness_age ... bench:     531,087 ns/iter (+/- 26,893)
+test benchmarks::bench_roulette               ... bench:     276,643 ns/iter (+/- 1,858)
+test benchmarks::bench_sort_population        ... bench:       1,483 ns/iter (+/- 6)
+test benchmarks::bench_survival_pressure      ... bench:          20 ns/iter (+/- 0)
+test benchmarks::bench_tournaments            ... bench:     964,101 ns/iter (+/- 45,469)
+test benchmarks::bench_update_progress        ... bench:       5,678 ns/iter (+/- 172)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 14 measured; 0 filtered out
 ```
