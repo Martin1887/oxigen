@@ -113,9 +113,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "nqueens-oxigen"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
- "oxigen 0.1.0",
+ "oxigen 1.0.0",
  "rand 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -129,7 +129,7 @@ dependencies = [
 
 [[package]]
 name = "oxigen"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "historian 3.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",

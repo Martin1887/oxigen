@@ -61,7 +61,7 @@ let (solutions, generation, progress) = GeneticExecution::<u8, QueensBoard>::new
 
 For a full example visit the [nqueens-oxigen](nqueens-oxigen/src/main.rs) example.
 
-For more information visit the documentation.
+For more information visit the [documentation](https://docs.rs/oxigen).
 
 
 ## Building
