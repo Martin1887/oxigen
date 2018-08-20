@@ -127,7 +127,7 @@ fn main() {
         File::create("population.txt").expect("Error creating population log file");
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
-    let (solutions, generation, progress) = GeneticExecution::<u8, QueensBoard>::new()
+    let (solutions, generation, progress, _population) = GeneticExecution::<u8, QueensBoard>::new()
         .population_size(population_size)
         .genotype_size(n_queens as u8)
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {

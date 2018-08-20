@@ -19,9 +19,19 @@ oxigen provides the following features:
 * Individual's fitness is cached to not do unnecessary recomputations (this can be disabled with `.cache_fitness(false)` if your fitness function is stochastic and so you need to recompute fitness in each generation).
 * Progress statistics can be configured to be printed every certain number of generations to a file.
 * Population individuals with their fitnesses can be configured to be printed every certain number of generations to a file.
+* Specific initial individuals can be inserted in the genetic algorithm execution.
+* Genetic executions can be resumed using the population of the last generation as initial population.
+* Coevolution is possible executing little genetic algorithm re-executions inside the fitness function.
 
 
 ## Usage
+
+In your `Cargo.toml` file add the `oxigen` dependency:
+
+```
+[dependencies]
+oxigen = "1.1"
+```
 
 To use `oxigen` `use oxigen::prelude::*` and call the `run` method over a `GeneticExecution` instance overwriting the default hyperparameters and functions folllowing your needs:
 
@@ -62,6 +72,70 @@ let (solutions, generation, progress) = GeneticExecution::<u8, QueensBoard>::new
 For a full example visit the [nqueens-oxigen](nqueens-oxigen/src/main.rs) example.
 
 For more information visit the [documentation](https://docs.rs/oxigen).
+
+
+### Resuming a previous execution
+
+Since version 1.1.0, genetic algorithm executions return the population of the last generation and new genetic executions accept a initial population. This permits to resuming previous executions and it also enables coevolution, since little genetic algorithm re-executions can be launched in the fitness function.
+
+In the following example a execution with 10000 generations is launched and after it is resumed until finding a solution with different rates.
+
+```
+let n_queens: u8 = std::env::args()
+    .nth(1)
+    .expect("Enter a number between 4 and 255 as argument")
+    .parse()
+    .expect("Enter a number between 4 and 255 as argument");
+let progress_log = File::create("progress.csv").expect("Error creating progress log file");
+let population_log =
+    File::create("population.txt").expect("Error creating population log file");
+let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+let population_size = 2_i32.pow(log2 as u32) as usize;
+
+let (_solutions, _generation, _progress, population) = GeneticExecution::<u8, QueensBoard>::new()
+    .population_size(population_size)
+    .genotype_size(n_queens as u8)
+    .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
+        start: f64::from(n_queens) / (8_f64 + 2_f64 * log2) / 100_f64,
+        bound: 0.005,
+        coefficient: -0.0002,
+    })))
+    .selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
+        start: log2 - 2_f64,
+        bound: log2 / 1.5,
+        coefficient: -0.0005,
+    })))
+    .select_function(Box::new(SelectionFunctions::Cup))
+    .age_function(Box::new(AgeFunctions::Cuadratic(
+        AgeThreshold(50),
+        AgeSlope(1_f64),
+    )))
+    .stop_criterion(Box::new(StopCriteria::Generation(10000)))
+    .run();
+
+let (solutions, generation, progress, _population) = GeneticExecution::<u8, QueensBoard>::new()
+    .population_size(population_size)
+    .genotype_size(n_queens as u8)
+    .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
+        start: f64::from(n_queens) / (8_f64 + 4_f64 * log2) / 100_f64,
+        bound: 0.005,
+        coefficient: -0.0002,
+    })))
+    .selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
+        start: log2 - 4_f64,
+        bound: log2 / 1.5,
+        coefficient: -0.0005,
+    })))
+    .select_function(Box::new(SelectionFunctions::Cup))
+    .age_function(Box::new(AgeFunctions::Cuadratic(
+        AgeThreshold(50),
+        AgeSlope(1_f64),
+    )))
+    .population(population)
+    .progress_log(20, progress_log)
+    .population_log(2000, population_log)
+    .run();
+```
 
 
 ## Building

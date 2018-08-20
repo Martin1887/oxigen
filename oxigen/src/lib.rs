@@ -129,8 +129,16 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     }
 
     /// Sets the population size.
-    pub fn population_size(mut self, new_pop: usize) -> Self {
-        self.population_size = new_pop;
+    pub fn population_size(mut self, new_pop_size: usize) -> Self {
+        self.population_size = new_pop_size;
+        self
+    }
+
+    /// Sets the initial population individuals. If lower individuals
+    /// than population_size are received, the rest of population will be
+    /// generated randomly.
+    pub fn population(mut self, new_pop: Vec<(Box<Ind>, Option<Fitness>)>) -> Self {
+        self.population = new_pop;
         self
     }
 
@@ -207,7 +215,8 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     /// - A vector with the individuals of the population that are solution of the problem.
     /// - The number of generations run.
     /// - The average progress in the last generations.
-    pub fn run(mut self) -> (Vec<Box<Ind>>, u64, f64) {
+    /// - The entire population in the last generation (useful for resuming the execution).
+    pub fn run(mut self) -> (Vec<Box<Ind>>, u64, f64, Vec<(Box<Ind>, Option<Fitness>)>) {
         let mut generation: u64 = 0;
         let mut last_progresses: Vec<f64> = Vec::new();
         let mut progress: f64 = 0.0;
@@ -218,7 +227,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         let mut last_best = 0f64;
 
         // Initialize randomly the population
-        for _ind in 0..self.population_size {
+        while self.population.len() < self.population_size {
             self.population
                 .push((Box::new(Ind::generate(&self.genotype_size)), None));
         }
@@ -274,7 +283,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         for i in solutions {
             final_solutions.push(self.population[i].0.clone());
         }
-        (final_solutions, generation, progress)
+        (final_solutions, generation, progress, self.population)
     }
 
     fn print_population(&mut self, generation: u64) {
