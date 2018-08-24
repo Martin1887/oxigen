@@ -13,7 +13,7 @@ oxigen provides the following features:
 * `SolutionFound`, `Generation` and `Progress` built-in stop criteria (you can implement your own stop criteria via the `StopCriterion` trait).
 * `Genotype` trait to define the genotype of your genetic algorithm. Whatever struct can implement the `Genotype` trait under the following restrictions:
     - It has a `iter` function that returns a `use std::slice::Iter` over its genes.
-    - It has a 'into_iter' function that consumes the individual and returns a ' use std::vec::IntoIter' over its genes.
+    - It has a `into_iter` function that consumes the individual and returns a `use std::vec::IntoIter` over its genes.
     - It implements `FromIterator` over its genes type, `Display`, `Clone`, `Send` and `Sync`.
     - It has functions to `generate` a random individual, to `mutate` an individual, to get the `fitness` of an individual and to know if and individual `is_solution` of the problem.
 * Individual's fitness is cached to not do unnecessary recomputations (this can be disabled with `.cache_fitness(false)` if your fitness function is stochastic and so you need to recompute fitness in each generation).
