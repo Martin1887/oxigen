@@ -1,8 +1,8 @@
 # oxigen
 
-oxigen is a parallel genetic algorithm library implemented in Rust. The name comes from the merge of `OXI`dación (Rust translated to Spanish) and `GEN`etic.
+Oxigen is a parallel genetic algorithm library implemented in Rust. The name comes from the merge of `OXI`dación (Rust translated to Spanish) and `GEN`etic.
 
-oxigen provides the following features:
+Oxigen provides the following features:
 
 * Fast and parallel genetic algorithm implementation (it solves the N Queens problem for N=255 in few seconds). For benchmarks view benchmarks section of this file.
 * Customizable mutation and selection rates with constant, linear and cuadratic functions according to generations built-in (you can implement your own functions via the `MutationRate` and `SelectionRate` traits).
@@ -41,11 +41,13 @@ let n_queens: u8 = std::env::args()
     .expect("Enter a number between 4 and 255 as argument")
     .parse()
     .expect("Enter a number between 4 and 255 as argument");
+
 let progress_log = File::create("progress.csv").expect("Error creating progress log file");
-let population_log =
-    File::create("population.txt").expect("Error creating population log file");
+let population_log = File::create("population.txt").expect("Error creating population log file");
 let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+
 let population_size = 2_i32.pow(log2 as u32) as usize;
+
 let (solutions, generation, progress) = GeneticExecution::<u8, QueensBoard>::new()
     .population_size(population_size)
     .genotype_size(n_queens as u8)
@@ -86,10 +88,11 @@ let n_queens: u8 = std::env::args()
     .expect("Enter a number between 4 and 255 as argument")
     .parse()
     .expect("Enter a number between 4 and 255 as argument");
+
 let progress_log = File::create("progress.csv").expect("Error creating progress log file");
-let population_log =
-    File::create("population.txt").expect("Error creating population log file");
+let population_log = File::create("population.txt").expect("Error creating population log file");
 let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+
 let population_size = 2_i32.pow(log2 as u32) as usize;
 
 let (_solutions, _generation, _progress, population) = GeneticExecution::<u8, QueensBoard>::new()
