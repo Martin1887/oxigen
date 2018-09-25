@@ -35,7 +35,7 @@ oxigen = "1.1"
 
 To use `oxigen` `use oxigen::prelude::*` and call the `run` method over a `GeneticExecution` instance overwriting the default hyperparameters and functions folllowing your needs:
 
-```
+```rust
 let n_queens: u8 = std::env::args()
     .nth(1)
     .expect("Enter a number between 4 and 255 as argument")
@@ -80,7 +80,7 @@ Since version 1.1.0, genetic algorithm executions return the population of the l
 
 In the following example a execution with 10000 generations is launched and after it is resumed until finding a solution with different rates.
 
-```
+```rust
 let n_queens: u8 = std::env::args()
     .nth(1)
     .expect("Enter a number between 4 and 255 as argument")
