@@ -194,7 +194,7 @@ come in many forms. You could:
   2. Ask for improved documentation as an [issue](https://github.com/Martin1887/oxigen/issues).
   3. Comment on issues that require
      feedback.
-  4. Contribute code via [pull requests](https://github.com/Martin1887/oxigen/pulls).
+  4. Contribute code via [pull requests](https://github.com/Martin1887/oxigen/pulls), don't forget to run `cargo fmt` before submitting your PR!
 
 We aim to keep Rocket's code quality at the highest level. This means that any
 code you contribute must be:

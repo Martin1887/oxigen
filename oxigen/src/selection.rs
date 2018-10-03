@@ -60,21 +60,21 @@ impl Selection for SelectionFunctions {
                     start: 0,
                     end: n_tournaments.0,
                 }.into_par_iter()
-                    .for_each_with(sender, |s, _t| {
-                        let mut rgen = SmallRng::from_entropy();
-                        let mut fighters = Vec::with_capacity(selection_rate);
-                        for _f in 0..selection_rate {
-                            let sel = rgen.sample(Uniform::from(0..selection_rate));
-                            fighters.push((sel, fitnesses[sel]));
-                        }
-                        s.send(
-                            fighters
-                                .par_iter()
-                                .max_by(|x, y| x.1.partial_cmp(&y.1).unwrap())
-                                .unwrap()
-                                .0,
-                        ).unwrap();
-                    });
+                .for_each_with(sender, |s, _t| {
+                    let mut rgen = SmallRng::from_entropy();
+                    let mut fighters = Vec::with_capacity(selection_rate);
+                    for _f in 0..selection_rate {
+                        let sel = rgen.sample(Uniform::from(0..selection_rate));
+                        fighters.push((sel, fitnesses[sel]));
+                    }
+                    s.send(
+                        fighters
+                            .par_iter()
+                            .max_by(|x, y| x.1.partial_cmp(&y.1).unwrap())
+                            .unwrap()
+                            .0,
+                    ).unwrap();
+                });
 
                 for win in receiver {
                     winners.push(win);
@@ -144,16 +144,16 @@ impl SelectionFunctions {
             start: 0,
             end: phases[phase].len() / 2,
         }.into_par_iter()
-            .for_each_with(sender, |s, i| {
-                let ind1 = i * 2;
-                let ind2 = ind1 + 1;
+        .for_each_with(sender, |s, i| {
+            let ind1 = i * 2;
+            let ind2 = ind1 + 1;
 
-                if phases[phase][ind1].1 >= phases[phase][ind2].1 {
-                    s.send((i, phases[phase][ind1])).unwrap();
-                } else {
-                    s.send((i, phases[phase][ind2])).unwrap();
-                }
-            });
+            if phases[phase][ind1].1 >= phases[phase][ind2].1 {
+                s.send((i, phases[phase][ind1])).unwrap();
+            } else {
+                s.send((i, phases[phase][ind2])).unwrap();
+            }
+        });
         for (i, child) in receiver {
             phases[phase - 1][i] = child;
         }
