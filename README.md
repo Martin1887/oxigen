@@ -1,5 +1,8 @@
 # oxigen
 
+[![Build Status](https://travis-ci.org/Martin1887/oxigen.svg?branch=master)](https://travis-ci.org/Martin1887/oxigen)
+[![Current Crates.io Version](https://img.shields.io/crates/v/oxigen.svg)](https://crates.io/crates/oxigen)
+
 Oxigen is a parallel genetic algorithm library implemented in Rust. The name comes from the merge of `OXI`dación (Rust translated to Spanish) and `GEN`etic.
 
 Oxigen provides the following features:
