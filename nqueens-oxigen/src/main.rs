@@ -134,18 +134,15 @@ fn main() {
             start: f64::from(n_queens) / (8_f64 + 2_f64 * log2) / 100_f64,
             bound: 0.005,
             coefficient: -0.0002,
-        })))
-        .selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
+        }))).selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
             start: log2 - 2_f64,
             bound: log2 / 1.5,
             coefficient: -0.0005,
-        })))
-        .select_function(Box::new(SelectionFunctions::Cup))
+        }))).select_function(Box::new(SelectionFunctions::Cup))
         .age_function(Box::new(AgeFunctions::Cuadratic(
             AgeThreshold(50),
             AgeSlope(1_f64),
-        )))
-        .progress_log(20, progress_log)
+        ))).progress_log(20, progress_log)
         .population_log(2000, population_log)
         .run();
 

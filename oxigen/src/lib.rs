@@ -469,21 +469,21 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             start: 0,
             end: ((selected.len() + 1) / 2),
         }.into_par_iter()
-            .for_each_with(sender, |s, i| {
-                let ind1 = i * 2;
-                let mut ind2 = ind1 + 1;
-                // If the number of selected individuals is odd, the last crossover is done
-                // using a random one among the selected individuals
-                if ind2 >= selected.len() {
-                    ind2 = SmallRng::from_entropy().sample(Uniform::from(0..selected.len()));
-                }
-                let (crossed1, crossed2) = self.crossover.cross(
-                    &self.population[selected[ind1]].0,
-                    &self.population[selected[ind2]].0,
-                );
-                s.send(crossed1).unwrap();
-                s.send(crossed2).unwrap();
-            });
+        .for_each_with(sender, |s, i| {
+            let ind1 = i * 2;
+            let mut ind2 = ind1 + 1;
+            // If the number of selected individuals is odd, the last crossover is done
+            // using a random one among the selected individuals
+            if ind2 >= selected.len() {
+                ind2 = SmallRng::from_entropy().sample(Uniform::from(0..selected.len()));
+            }
+            let (crossed1, crossed2) = self.crossover.cross(
+                &self.population[selected[ind1]].0,
+                &self.population[selected[ind2]].0,
+            );
+            s.send(crossed1).unwrap();
+            s.send(crossed2).unwrap();
+        });
         for child in receiver {
             self.population.push((Box::new(child), None));
         }

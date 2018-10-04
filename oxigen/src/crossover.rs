@@ -35,8 +35,7 @@ impl<T, G: Genotype<T>> Crossover<T, G> for CrossoverFunctions {
                                 .into_iter()
                                 .enumerate()
                                 .filter(|(i, _gen)| *i >= cross_point),
-                        )
-                        .map(|(_i, gen)| gen)
+                        ).map(|(_i, gen)| gen)
                         .collect(),
                     ind2.clone()
                         .into_iter()
@@ -47,8 +46,7 @@ impl<T, G: Genotype<T>> Crossover<T, G> for CrossoverFunctions {
                                 .into_iter()
                                 .enumerate()
                                 .filter(|(i, _gen)| *i >= cross_point),
-                        )
-                        .map(|(_i, gen)| gen)
+                        ).map(|(_i, gen)| gen)
                         .collect(),
                 )
             }
