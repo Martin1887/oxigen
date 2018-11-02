@@ -294,7 +294,8 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 f.write_all(
                     format!("Individual: {}; fitness: {}\n\n", i, ind.1.unwrap().fitness)
                         .as_bytes(),
-                ).expect(POPULATION_ERR_MSG);
+                )
+                .expect(POPULATION_ERR_MSG);
                 f.write_all(format!("{}", ind.0).as_bytes())
                     .expect(POPULATION_ERR_MSG);
             }
@@ -468,7 +469,8 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         std::ops::Range {
             start: 0,
             end: ((selected.len() + 1) / 2),
-        }.into_par_iter()
+        }
+        .into_par_iter()
         .for_each_with(sender, |s, i| {
             let ind1 = i * 2;
             let mut ind2 = ind1 + 1;
@@ -512,7 +514,6 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     }
 
     fn sort_population(&mut self) {
-        // Self::quick_sort(&mut self.population, &mut self.fitnesses);
         self.population.par_sort_unstable_by(|el1, el2| {
             el2.1
                 .unwrap()
