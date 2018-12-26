@@ -237,10 +237,12 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             self.print_progress_header();
         }
 
-        while !self
-            .stop_criterion
-            .stop(generation, progress, solutions.len(), &current_fitnesses)
-        {
+        while !self.stop_criterion.stop(
+            generation,
+            progress,
+            solutions.len() as u16,
+            &current_fitnesses,
+        ) {
             if progress.is_nan() {
                 progress = 0.0;
             }
