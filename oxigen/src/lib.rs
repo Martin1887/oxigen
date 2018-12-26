@@ -295,11 +295,10 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 .expect(POPULATION_ERR_MSG);
             for (i, ind) in self.population.iter().enumerate() {
                 f.write_all(
-                    format!("Individual: {}; fitness: {}\n\n", i, ind.1.unwrap().fitness)
-                        .as_bytes(),
+                    format!("Individual: {}; fitness: {}\n", i, ind.1.unwrap().fitness).as_bytes(),
                 )
                 .expect(POPULATION_ERR_MSG);
-                f.write_all(format!("{}", ind.0).as_bytes())
+                f.write_all(format!("{}\n\n", ind.0).as_bytes())
                     .expect(POPULATION_ERR_MSG);
             }
             f.write_all(POPULATION_SEPARATOR).expect(POPULATION_ERR_MSG);
