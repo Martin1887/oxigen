@@ -219,7 +219,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     pub fn run(mut self) -> (Vec<Box<Ind>>, u64, f64, Vec<(Box<Ind>, Option<Fitness>)>) {
         let mut generation: u64 = 0;
         let mut last_progresses: Vec<f64> = Vec::new();
-        let mut progress: f64 = 0.0;
+        let mut progress: f64 = std::f64::NAN;
         let mut solutions: Vec<usize> = Vec::new();
         let mut mutation_rate;
         let mut selection_rate;
@@ -241,6 +241,9 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             .stop_criterion
             .stop(generation, progress, solutions.len(), &current_fitnesses)
         {
+            if progress.is_nan() {
+                progress = 0.0;
+            }
             generation += 1;
 
             mutation_rate = self.mutation_rate.rate(
