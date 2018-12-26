@@ -33,4 +33,8 @@ pub trait Genotype<T>: FromIterator<T> + Display + Clone + Send + Sync {
 
     /// Defines if an individual is a valid solution to the problem.
     fn is_solution(&self, fitness: f64) -> bool;
+
+    /// Fix the individual to satisfy the problem restrictions. The default
+    /// implementation is to remain the individual unmodified always.
+    fn fix(&mut self) {}
 }

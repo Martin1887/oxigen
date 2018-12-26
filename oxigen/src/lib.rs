@@ -231,6 +231,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             self.population
                 .push((Box::new(Ind::generate(&self.genotype_size)), None));
         }
+        self.fix();
 
         if self.progress_log.0 > 0 {
             self.print_progress_header();
@@ -261,6 +262,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             let selected = self.selection.select(&current_fitnesses, selection_rate);
             self.cross(&selected);
             self.mutate(mutation_rate);
+            self.fix();
             self.compute_fitnesses(false);
             self.sort_population();
             self.survival_pressure_kill();
@@ -384,6 +386,12 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         }
 
         last_progresses.par_iter().sum::<f64>() / last_progresses.len() as f64
+    }
+
+    fn fix(&mut self) {
+        self.population.par_iter_mut().for_each(|ind| {
+            ind.0.fix();
+        });
     }
 
     fn get_fitnesses(&self) -> Vec<f64> {
