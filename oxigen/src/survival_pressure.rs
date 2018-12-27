@@ -20,9 +20,9 @@ pub enum SurvivalPressureFunctions {
 
 impl<T, G: Genotype<T>> SurvivalPressure<T, G> for SurvivalPressureFunctions {
     fn kill(&self, population_size: usize, population: &[(Box<G>, Option<Fitness>)]) -> Vec<usize> {
-        let mut killed = Vec::with_capacity(population_size / 2);
+        let mut killed = Vec::with_capacity(population_size);
         let mut i = population.len() - 1;
-        while i >= population_size / 2 {
+        while i >= population_size {
             killed.push(i);
             i -= 1;
         }
