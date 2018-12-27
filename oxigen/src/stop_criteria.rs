@@ -26,6 +26,15 @@ pub enum StopCriteria {
     Generation(u64),
     /// Stop when the mean progress in the last generations is lower than a specific threshold.
     Progress(f64),
+    /// Stop when the generation is bigger than the first value and the mean progress in the last
+    /// generations is lower than the specific threshold specified as the second value.
+    GenerationAndProgress(u64, f64),
+    /// Stop when the max fitness is bigger or equal than a specific threshold.
+    MaxFitness(f64),
+    /// Stop when the min fitness is bigger or equal than a specific threshold.
+    MinFitness(f64),
+    /// Stop when the average fitness is bigger or equal than a specific threshold.
+    AvgFitness(f64),
 }
 
 impl StopCriterion for StopCriteria {
@@ -34,13 +43,31 @@ impl StopCriterion for StopCriteria {
         generation: u64,
         progress: f64,
         n_solutions: u16,
-        _population_fitness: &[f64],
+        population_fitness: &[f64],
     ) -> bool {
         match self {
             StopCriteria::SolutionFound => n_solutions > 0,
             StopCriteria::SolutionsFound(i) => n_solutions >= *i,
-            StopCriteria::Generation(i) => generation >= *i,
+            StopCriteria::Generation(g) => generation >= *g,
             StopCriteria::Progress(p) => progress <= *p,
+            StopCriteria::GenerationAndProgress(g, p) => generation >= *g && progress <= *p,
+            StopCriteria::MaxFitness(f) => {
+                *population_fitness
+                    .iter()
+                    .max_by(|x, y| x.partial_cmp(&y).unwrap())
+                    .unwrap()
+                    >= *f
+            }
+            StopCriteria::MinFitness(f) => {
+                *population_fitness
+                    .iter()
+                    .min_by(|x, y| x.partial_cmp(&y).unwrap())
+                    .unwrap()
+                    >= *f
+            }
+            StopCriteria::AvgFitness(f) => {
+                population_fitness.iter().sum::<f64>() / population_fitness.len() as f64 >= *f
+            }
         }
     }
 }

@@ -232,6 +232,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 .push((Box::new(Ind::generate(&self.genotype_size)), None));
         }
         self.fix();
+        current_fitnesses = self.compute_fitnesses(true);
 
         if self.progress_log.0 > 0 {
             self.print_progress_header();
