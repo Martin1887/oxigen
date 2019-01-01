@@ -273,6 +273,8 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             let best = current_fitnesses[0];
             progress = Self::update_progress(last_best, best, &mut last_progresses);
             last_best = best;
+            
+            self.update_age();
 
             if self.progress_log.0 > 0 && generation % self.progress_log.0 == 0 {
                 self.print_progress(generation, progress, &last_progresses, solutions.len());
@@ -391,6 +393,15 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     fn fix(&mut self) {
         self.population.par_iter_mut().for_each(|ind| {
             ind.0.fix();
+        });
+    }
+    
+    fn update_age(&mut self) {
+        self.population.par_iter_mut().for_each(|ind| {
+            if let Some(mut fit) = ind.1 {
+                fit.age += 1;
+                ind.1 = Some(fit);
+            }
         });
     }
 
