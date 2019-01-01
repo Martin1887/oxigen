@@ -223,7 +223,6 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         let mut solutions: Vec<usize> = Vec::new();
         let mut mutation_rate;
         let mut selection_rate;
-        let mut current_fitnesses = Vec::new();
         let mut last_best = 0f64;
 
         // Initialize randomly the population
@@ -232,7 +231,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 .push((Box::new(Ind::generate(&self.genotype_size)), None));
         }
         self.fix();
-        current_fitnesses = self.compute_fitnesses(true);
+        let mut current_fitnesses = self.compute_fitnesses(true);
 
         if self.progress_log.0 > 0 {
             self.print_progress_header();
