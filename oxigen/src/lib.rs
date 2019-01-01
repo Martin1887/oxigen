@@ -244,9 +244,6 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             solutions.len() as u16,
             &current_fitnesses,
         ) {
-            if progress.is_nan() {
-                progress = 0.0;
-            }
             generation += 1;
 
             mutation_rate = self.mutation_rate.rate(
