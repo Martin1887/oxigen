@@ -33,7 +33,7 @@ In your `Cargo.toml` file add the `oxigen` dependency:
 
 ```
 [dependencies]
-oxigen = "1.1"
+oxigen = "^1.4.1"
 ```
 
 To use `oxigen` `use oxigen::prelude::*` and call the `run` method over a `GeneticExecution` instance overwriting the default hyperparameters and functions folllowing your needs:

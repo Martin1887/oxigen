@@ -1,6 +1,6 @@
 [package]
 name = "oxigen"
-version = "1.4.0"
+version = "1.4.1"
 authors = ["Martin1887 <marcos.martin.pozo.delgado@gmail.com>"]
 description = "Fast and parallel genetic algorithm library."
 repository = "https://github.com/Martin1887/oxigen"

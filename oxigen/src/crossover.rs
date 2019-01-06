@@ -23,7 +23,7 @@ impl<T, G: Genotype<T>> Crossover<T, G> for CrossoverFunctions {
         match self {
             SingleCrossPoint => {
                 let ind_size = min(ind1.iter().len(), ind2.iter().len());
-                let cross_point = SmallRng::from_entropy().sample(Uniform::from(0..ind_size));
+                let cross_point = SmallRng::from_entropy().sample(Uniform::from(1..ind_size));
 
                 (
                     ind1.clone()
