@@ -272,8 +272,6 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             let best = current_fitnesses[0];
             progress = Self::update_progress(last_best, best, &mut last_progresses);
             last_best = best;
-            
-            self.update_age();
 
             if self.progress_log.0 > 0 && generation % self.progress_log.0 == 0 {
                 self.print_progress(generation, progress, &last_progresses, solutions.len());
@@ -281,6 +279,8 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             if self.population_log.0 > 0 && generation % self.population_log.0 == 0 {
                 self.print_population(generation);
             }
+            
+            self.update_age();
         }
 
         let mut final_solutions: Vec<Box<Ind>> = Vec::new();
@@ -296,7 +296,14 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 .expect(POPULATION_ERR_MSG);
             for (i, ind) in self.population.iter().enumerate() {
                 f.write_all(
-                    format!("Individual: {}; fitness: {}\n", i, ind.1.unwrap().fitness).as_bytes(),
+                    format!(
+                        "Individual: {}; fitness: {}, age: {}, original_fitness: {}\n",
+                        i,
+                        ind.1.unwrap().fitness,
+                        ind.1.unwrap().age,
+                        ind.1.unwrap().original_fitness
+                    )
+                    .as_bytes(),
                 )
                 .expect(POPULATION_ERR_MSG);
                 f.write_all(format!("{}\n\n", ind.0).as_bytes())
@@ -428,26 +435,33 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             self.population
                 .par_iter_mut()
                 .filter(|ind| ind.1.is_some())
-                .map(|ind| ind.1.unwrap())
-                .for_each(|mut fit| {
+                .for_each(|ind| {
+                    let fit = ind.1.unwrap();
                     let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
                     if age_exceed > 0 {
-                        fit.fitness =
-                            age_function.age_unfitness(age_exceed as u64, fit.original_fitness);
+                        ind.1 = Some(Fitness {
+                            fitness: age_function
+                                .age_unfitness(age_exceed as u64, fit.original_fitness),
+                            age: fit.age,
+                            original_fitness: fit.original_fitness,
+                        });
                     }
                 });
         } else {
             self.population.par_iter_mut().for_each(|ind| {
                 let mut new_fit_value = ind.0.fitness();
                 match ind.1 {
-                    Some(mut fit) => {
-                        let age: u64 = fit.age;
-                        let age_exceed: i64 = age as i64 - age_function.age_threshold() as i64;
+                    Some(fit) => {
+                        let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
                         if age_exceed > 0 {
                             new_fit_value =
                                 age_function.age_unfitness(age_exceed as u64, new_fit_value);
                         }
-                        fit.fitness = new_fit_value;
+                        ind.1 = Some(Fitness {
+                            fitness: new_fit_value,
+                            age: fit.age,
+                            original_fitness: fit.original_fitness,
+                        });
                     }
                     None => {
                         ind.1 = Some(Fitness {
@@ -459,6 +473,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 }
             });
         }
+
         self.get_fitnesses()
     }
 
@@ -470,7 +485,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             .par_iter()
             .enumerate()
             .for_each_with(sender, |s, (i, ind)| {
-                if ind.0.is_solution(ind.1.unwrap().fitness) {
+                if ind.0.is_solution(ind.1.unwrap().original_fitness) {
                     s.send(i).unwrap();
                 }
             });
