@@ -59,52 +59,57 @@ impl Genotype<u8> for QueensBoard {
         QueensBoard(individual)
     }
 
-    // This function returns the mximum punctuaction possible (n-1, since in the
-    // worst case n-1 queens must be moved to get a solution) minus the number of
-    // queens that collide with others
+    // This function returns the maximum punctuaction possible (n, since in the
+    // worst case n queens collide) minus the number of queens that collide with others
     fn fitness(&self) -> f64 {
         let size = self.0.len();
-        let diags_exceed = size as isize - 1isize;
-        let mut collisions = 0;
-        let mut verticals = Vec::with_capacity(size);
-        let mut diagonals = Vec::with_capacity(size + diags_exceed as usize);
-        let mut inv_diags = Vec::with_capacity(size + diags_exceed as usize);
+        let diags_exceed = size as isize - 1_isize;
+        let mut collisions = Vec::with_capacity(size);
+        let mut verticals: Vec<isize> = Vec::with_capacity(size);
+        let mut diagonals: Vec<isize> = Vec::with_capacity(size + diags_exceed as usize);
+        let mut inv_diags: Vec<isize> = Vec::with_capacity(size + diags_exceed as usize);
         for _i in 0..size {
-            verticals.push(false);
-            diagonals.push(false);
-            inv_diags.push(false);
+            verticals.push(-1);
+            diagonals.push(-1);
+            inv_diags.push(-1);
+            collisions.push(false);
         }
         for _i in 0..diags_exceed as usize {
-            diagonals.push(false);
-            inv_diags.push(false);
+            diagonals.push(-1);
+            inv_diags.push(-1);
         }
 
         for (row, queen) in self.0.iter().enumerate() {
-            // println!("row: {}, queen: {}", row, queen);
-            let mut collision = if verticals[*queen as usize] { 1 } else { 0 };
-            verticals[*queen as usize] = true;
+            let mut collision = verticals[*queen as usize];
+            if collision > -1 {
+                collisions[row] = true;
+                collisions[collision as usize] = true;
+            }
+            verticals[*queen as usize] = row as isize;
 
             // A collision exists in the diagonal if col-row have the same value
             // for more than one queen
             let diag = ((*queen as isize - row as isize) + diags_exceed) as usize;
-            if diagonals[diag] {
-                collision = 1;
+            collision = diagonals[diag];
+            if collision > -1 {
+                collisions[row] = true;
+                collisions[collision as usize] = true;
             }
-            diagonals[diag] = true;
+            diagonals[diag] = row as isize;
 
             // A collision exists in the inverse diagonal if n-1-col-row have the
             // same value for more than one queen
             let inv_diag =
                 ((diags_exceed - *queen as isize - row as isize) + diags_exceed) as usize;
-            if inv_diags[inv_diag] {
-                collision = 1;
+            collision = inv_diags[inv_diag];
+            if collision > -1 {
+                collisions[row] = true;
+                collisions[collision as usize] = true;
             }
-            inv_diags[inv_diag] = true;
-
-            collisions += collision;
+            inv_diags[inv_diag] = row as isize;
         }
 
-        (size - 1 - collisions) as f64
+        (size - collisions.into_iter().filter(|r| *r).count()) as f64
     }
 
     fn mutate(&mut self, rgen: &mut SmallRng, index: usize) {
@@ -112,7 +117,7 @@ impl Genotype<u8> for QueensBoard {
     }
 
     fn is_solution(&self, fitness: f64) -> bool {
-        fitness as usize == self.0.len() - 1
+        fitness as usize == self.0.len()
     }
 }
 
