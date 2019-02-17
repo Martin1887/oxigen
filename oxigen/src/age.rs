@@ -9,6 +9,18 @@ pub trait Age: Send + Sync {
 
     /// Returns the fitness after decrease it by age using the
     /// number of `age_generations` that exceeds the age threshold.
+    /// The generation when the individual is created is the age 0.
+    /// This function is called when `age_generations` is bigger or equal than 0.
+    /// E.g.:
+    /// ```ignore
+    /// individual.age=2, age_threshold=2 -> age_generations=0
+    /// ```
+    /// ```ignore
+    /// individual.age=1, age_threshold=2 -> age_generations=-1 (not called)
+    /// ```
+    /// ```ignore
+    /// individual.age=4, age_threshold=2 -> age_generations=2
+    /// ```
     fn age_unfitness(&self, age_generations: u64, fitness: f64) -> f64;
 }
 

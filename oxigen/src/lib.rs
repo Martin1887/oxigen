@@ -438,7 +438,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 .for_each(|ind| {
                     let fit = ind.1.unwrap();
                     let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
-                    if age_exceed > 0 {
+                    if age_exceed >= 0 {
                         ind.1 = Some(Fitness {
                             fitness: age_function
                                 .age_unfitness(age_exceed as u64, fit.original_fitness),
@@ -453,7 +453,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 match ind.1 {
                     Some(fit) => {
                         let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
-                        if age_exceed > 0 {
+                        if age_exceed >= 0 {
                             new_fit_value =
                                 age_function.age_unfitness(age_exceed as u64, new_fit_value);
                         }
