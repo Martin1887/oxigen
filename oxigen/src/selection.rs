@@ -59,7 +59,8 @@ impl Selection for SelectionFunctions {
                 Range {
                     start: 0,
                     end: n_tournaments.0,
-                }.into_par_iter()
+                }
+                .into_par_iter()
                 .for_each_with(sender, |s, _t| {
                     let mut rgen = SmallRng::from_entropy();
                     let mut fighters = Vec::with_capacity(selection_rate);
@@ -73,7 +74,8 @@ impl Selection for SelectionFunctions {
                             .max_by(|x, y| x.1.partial_cmp(&y.1).unwrap())
                             .unwrap()
                             .0,
-                    ).unwrap();
+                    )
+                    .unwrap();
                 });
 
                 for win in receiver {
@@ -100,7 +102,7 @@ impl Selection for SelectionFunctions {
                     candidates.push(*f);
                 }
                 {
-                    let mut last_phase = &mut phases[n_phases - 1];
+                    let last_phase = &mut phases[n_phases - 1];
                     let mut i = 0;
                     while i < last_phase.len() {
                         let sel = rgen.sample(Uniform::from(0..candidates.len()));
@@ -143,7 +145,8 @@ impl SelectionFunctions {
         Range {
             start: 0,
             end: phases[phase].len() / 2,
-        }.into_par_iter()
+        }
+        .into_par_iter()
         .for_each_with(sender, |s, i| {
             let ind1 = i * 2;
             let ind2 = ind1 + 1;

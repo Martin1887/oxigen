@@ -1,0 +1,14 @@
+[package]
+name = "onemax-oxigen"
+description = "OneMax simple problem resolution using oxigen."
+version = "1.0.0"
+authors = ["Martin1887 <marcos.martin.pozo.delgado@gmail.com>"]
+repository = "https://github.com/Martin1887/oxigen"
+readme = "../README.md"
+keywords = ["oxigen", "genetic", "algorithm", "onemax"]
+license = "MIT/Apache-2.0"
+categories = ["algorithms", "science"]
+
+[dependencies]
+rand = "0.5"
+oxigen = { path = "../oxigen" }

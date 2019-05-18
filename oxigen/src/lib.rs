@@ -279,7 +279,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             if self.population_log.0 > 0 && generation % self.population_log.0 == 0 {
                 self.print_population(generation);
             }
-            
+
             self.update_age();
         }
 
@@ -328,11 +328,11 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     ) {
         let current_fitnesses = self.get_fitnesses();
         if let Some(ref mut f) = self.progress_log.1 {
-            let mut progress_hist = Histo::default();
+            let progress_hist = Histo::default();
             for prog in last_progresses.iter() {
                 progress_hist.measure(*prog);
             }
-            let mut fit_hist = Histo::default();
+            let fit_hist = Histo::default();
             for fit in &current_fitnesses {
                 fit_hist.measure(*fit);
             }
@@ -401,7 +401,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             ind.0.fix();
         });
     }
-    
+
     fn update_age(&mut self) {
         self.population.par_iter_mut().for_each(|ind| {
             if let Some(mut fit) = ind.1 {
