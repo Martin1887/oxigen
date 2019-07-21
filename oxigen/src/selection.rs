@@ -65,7 +65,7 @@ impl Selection for SelectionFunctions {
                     let mut rgen = SmallRng::from_entropy();
                     let mut fighters = Vec::with_capacity(selection_rate);
                     for _f in 0..selection_rate {
-                        let sel = rgen.sample(Uniform::from(0..selection_rate));
+                        let sel = rgen.sample(Uniform::from(0..fitnesses.len()));
                         fighters.push((sel, fitnesses[sel]));
                     }
                     s.send(
