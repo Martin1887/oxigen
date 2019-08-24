@@ -216,6 +216,19 @@ explicitly state otherwise, any contribution intentionally submitted for
 inclusion in oxigen by you shall be dual licensed under the MIT License and
 Apache License, Version 2.0, without any additional terms or conditions.
 
+## Reference
+Pozo, M.M. "Oxigen: Fast, parallel, extensible and adaptable genetic algorithm library written in Rust".
+
+
+### Bibtex
+```tex
+@misc{
+  title={Oxigen: Fast, parallel, extensible and adaptable genetic algorithm library written in Rust},
+  author={Pozo M.M.},
+  howpublised = "\url{https://github.com/Martin1887/oxigen}"
+}
+```
+
 ## License
 
 oxigen is licensed under either of the following, at your option:
