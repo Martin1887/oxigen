@@ -1,12 +1,12 @@
 [package]
 name = "oxigen"
-version = "1.4.3"
+version = "1.5.0"
 authors = ["Martin1887 <marcos.martin.pozo.delgado@gmail.com>"]
-description = "Fast and parallel genetic algorithm library."
+description = "Fast, parallel, extensible and adaptable genetic algorithm library."
 repository = "https://github.com/Martin1887/oxigen"
 readme = "../README.md"
 keywords = ["oxigen", "genetic", "algorithm", "heuristic", "search"]
-license = "MIT/Apache-2.0"
+license = "MPL-2.0"
 categories = ["algorithms", "science"]
 
 [dependencies]
