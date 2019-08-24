@@ -118,8 +118,9 @@ impl Genotype<u8> for QueensBoard {
 }
 
 #[bench]
-fn bench_mutation(b: &mut Bencher) {
+fn bench_mutation_1024inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
+    let mutation_rate = test::black_box(0.5);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
     let mut gen_exec = test::black_box(
@@ -128,12 +129,12 @@ fn bench_mutation(b: &mut Bencher) {
             .genotype_size(n_queens as u8),
     );
     b.iter(|| {
-        gen_exec.mutate(0.5);
+        gen_exec.mutate(mutation_rate);
     });
 }
 
 #[bench]
-fn bench_cup(b: &mut Bencher) {
+fn bench_selection_cup_255inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -152,12 +153,12 @@ fn bench_cup(b: &mut Bencher) {
     }
     let current_fitnesses = gen_exec.compute_fitnesses(true);
     b.iter(|| {
-        gen_exec.selection.select(&current_fitnesses, 5);
+        gen_exec.selection.select(&current_fitnesses, 8);
     });
 }
 
 #[bench]
-fn bench_tournaments(b: &mut Bencher) {
+fn bench_selection_tournaments_256inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -166,7 +167,7 @@ fn bench_tournaments(b: &mut Bencher) {
             .population_size(population_size)
             .genotype_size(n_queens as u8)
             .select_function(Box::new(SelectionFunctions::Tournaments(NTournaments(
-                population_size / 2,
+                population_size / 4,
             )))),
     );
     // Initialize randomly the population
@@ -185,7 +186,7 @@ fn bench_tournaments(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_roulette(b: &mut Bencher) {
+fn bench_selection_roulette_256inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -206,19 +207,20 @@ fn bench_roulette(b: &mut Bencher) {
     b.iter(|| {
         gen_exec
             .selection
-            .select(&current_fitnesses, population_size / 2);
+            .select(&current_fitnesses, population_size / 4);
     });
 }
 
 #[bench]
-fn bench_cross(b: &mut Bencher) {
+fn bench_cross_single_point_255inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
     let mut gen_exec = test::black_box(
         GeneticExecution::<u8, QueensBoard>::new()
             .population_size(population_size)
-            .genotype_size(n_queens as u8),
+            .genotype_size(n_queens as u8)
+            .crossover_function(Box::new(CrossoverFunctions::SingleCrossPoint)),
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
@@ -227,17 +229,68 @@ fn bench_cross(b: &mut Bencher) {
             None,
         ));
     }
-    let selected = vec![
-        0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46,
-        48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92,
-    ];
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
     b.iter(|| {
         gen_exec.cross(&selected);
     });
 }
 
 #[bench]
-fn bench_not_cached_fitness(b: &mut Bencher) {
+fn bench_cross_multi_point_255inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .crossover_function(Box::new(CrossoverFunctions::MultiCrossPoint)),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push((
+            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+            None,
+        ));
+    }
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
+    b.iter(|| {
+        gen_exec.cross(&selected);
+    });
+}
+
+#[bench]
+fn bench_cross_uniform_255inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .crossover_function(Box::new(CrossoverFunctions::UniformCross)),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push((
+            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+            None,
+        ));
+    }
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
+    b.iter(|| {
+        gen_exec.cross(&selected);
+    });
+}
+
+#[bench]
+fn bench_not_cached_fitness_1024inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -260,7 +313,7 @@ fn bench_not_cached_fitness(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_fitness(b: &mut Bencher) {
+fn bench_fitness_1024inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -285,7 +338,7 @@ fn bench_fitness(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_not_cached_fitness_age(b: &mut Bencher) {
+fn bench_not_cached_fitness_age_1024inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -313,7 +366,7 @@ fn bench_not_cached_fitness_age(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_fitness_age(b: &mut Bencher) {
+fn bench_fitness_age_1024inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -340,7 +393,7 @@ fn bench_fitness_age(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_get_fitnesses(b: &mut Bencher) {
+fn bench_get_fitnesses_1024inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -363,7 +416,7 @@ fn bench_get_fitnesses(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_update_progress(b: &mut Bencher) {
+fn bench_update_progress_1024inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -389,7 +442,7 @@ fn bench_update_progress(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_get_solutions(b: &mut Bencher) {
+fn bench_get_solutions_1024inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -412,7 +465,7 @@ fn bench_get_solutions(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_survival_pressure(b: &mut Bencher) {
+fn bench_survival_pressure_255inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -435,7 +488,7 @@ fn bench_survival_pressure(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_sort_population(b: &mut Bencher) {
+fn bench_sort_population_1024inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;

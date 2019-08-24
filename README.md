@@ -159,33 +159,34 @@ To run benchmarks, you will need a nightly Rust compiler. Uncomment the lines `/
 The following benchmarks have been created to measure the genetic algorithm functions performance:
 
 ```
-running 14 tests
-test benchmarks::bench_cross                  ... bench:      31,740 ns/iter (+/- 2,106)
-test benchmarks::bench_cup                    ... bench:     319,214 ns/iter (+/- 31,373)
-test benchmarks::bench_fitness                ... bench:     542,184 ns/iter (+/- 31,025)
-test benchmarks::bench_fitness_age            ... bench:      44,545 ns/iter (+/- 2,616)
-test benchmarks::bench_get_fitnesses          ... bench:      16,936 ns/iter (+/- 703)
-test benchmarks::bench_get_solutions          ... bench:      34,221 ns/iter (+/- 1,332)
-test benchmarks::bench_mutation               ... bench:           7 ns/iter (+/- 0)
-test benchmarks::bench_not_cached_fitness     ... bench:     531,058 ns/iter (+/- 2,958)
-test benchmarks::bench_not_cached_fitness_age ... bench:     531,087 ns/iter (+/- 26,893)
-test benchmarks::bench_roulette               ... bench:     276,643 ns/iter (+/- 1,858)
-test benchmarks::bench_sort_population        ... bench:       1,483 ns/iter (+/- 6)
-test benchmarks::bench_survival_pressure      ... bench:          20 ns/iter (+/- 0)
-test benchmarks::bench_tournaments            ... bench:     964,101 ns/iter (+/- 45,469)
-test benchmarks::bench_update_progress        ... bench:       5,678 ns/iter (+/- 172)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 14 measured; 0 filtered out
+running 16 tests
+test benchmarks::bench_cross_multi_point_255inds       ... bench:     379,946 ns/iter (+/- 15,055)
+test benchmarks::bench_cross_single_point_255inds      ... bench:     171,017 ns/iter (+/- 18,285)
+test benchmarks::bench_cross_uniform_255inds           ... bench:     118,836 ns/iter (+/- 33,141)
+test benchmarks::bench_fitness_1024inds                ... bench:     511,328 ns/iter (+/- 71,904)
+test benchmarks::bench_fitness_age_1024inds            ... bench:      54,180 ns/iter (+/- 6,610)
+test benchmarks::bench_get_fitnesses_1024inds          ... bench:      19,679 ns/iter (+/- 859)
+test benchmarks::bench_get_solutions_1024inds          ... bench:      31,845 ns/iter (+/- 3,719)
+test benchmarks::bench_mutation_1024inds               ... bench:           7 ns/iter (+/- 0)
+test benchmarks::bench_not_cached_fitness_1024inds     ... bench:     488,846 ns/iter (+/- 57,395)
+test benchmarks::bench_not_cached_fitness_age_1024inds ... bench:     492,824 ns/iter (+/- 42,625)
+test benchmarks::bench_selection_cup_255inds           ... bench:     354,222 ns/iter (+/- 53,300)
+test benchmarks::bench_selection_roulette_256inds      ... bench:     140,935 ns/iter (+/- 2,051)
+test benchmarks::bench_selection_tournaments_256inds   ... bench:     482,830 ns/iter (+/- 47,955)
+test benchmarks::bench_sort_population_1024inds        ... bench:       1,441 ns/iter (+/- 22)
+test benchmarks::bench_survival_pressure_255inds       ... bench:          62 ns/iter (+/- 2)
+test benchmarks::bench_update_progress_1024inds        ... bench:       7,431 ns/iter (+/- 352)
 ```
+
+These benchmarks have been executed in a Intel Core i7 6700K with 16 GB of DDR4
+and a 512 GB Samsung 950 Pro NVMe SSD in ext4 format in Fedora 30
+with Linux kernel 5.2.9.
 
 The difference of performance among the different fitness benchmarks have the following explanations:
 
  * `bench_fitness` measures the performance of a cached execution cleaning the fitnesses after each bench iteration. This cleaning is the reason of being a bit slower than not cached benchmarks.
  * `bench_fitness_age` measures the performance with fitness cached in all bench iterations, so it is very much faster.
  * Not cached benchmarks measure the performance of not cached executions, with 1 generation individuals in the last case, so the performance is similar but a bit slower for the benchmark that must apply age unfitness.
-
-
- The `bench_tournaments` is slower than cup and roulette because it has been configured with `population_size / 2` tournaments of the same size of individuals. In practice, a configuration like this is only used in the last generations of the algorithm where the selection rate is high, being very much faster in the previous generations.
 
 
 ## Contributing
@@ -231,7 +232,4 @@ Pozo, M.M. "Oxigen: Fast, parallel, extensible and adaptable genetic algorithm l
 
 ## License
 
-oxigen is licensed under either of the following, at your option:
-
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT License ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+oxigen is licensed under Mozilla Public License 2.0.
