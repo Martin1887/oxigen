@@ -10,6 +10,6 @@ license = "MPL-2.0"
 categories = ["algorithms", "science"]
 
 [dependencies]
-historian = "3.0"
-rand = "0.5"
-rayon = "1.0"
+historian = "4"
+rand = {"version" = "0.7", "features" = ["small_rng"]}
+rayon = "1"
