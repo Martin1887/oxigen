@@ -397,8 +397,10 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     }
 
     fn fix(&mut self) {
-        self.population.par_iter_mut().for_each(|ind| {
-            ind.0.fix();
+        self.population.par_iter_mut().for_each(|indwf| {
+            if indwf.0.fix() {
+                indwf.1 = None
+            }
         });
     }
 

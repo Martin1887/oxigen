@@ -39,5 +39,12 @@ pub trait Genotype<T>: Display + Clone + Send + Sync {
 
     /// Fix the individual to satisfy the problem restrictions. The default
     /// implementation is to remain the individual unmodified always.
-    fn fix(&mut self) {}
+    ///
+    /// # Returns
+    ///
+    /// true if the individual has changed and false otherwise. If this function
+    /// returns true the fitness is recomputed.
+    fn fix(&mut self) -> bool {
+        false
+    }
 }
