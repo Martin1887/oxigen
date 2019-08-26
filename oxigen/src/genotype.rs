@@ -2,7 +2,6 @@
 
 use rand::prelude::SmallRng;
 use std::fmt::Display;
-use std::iter::FromIterator;
 use std::slice::Iter;
 use std::vec::IntoIter;
 

@@ -66,23 +66,23 @@ pub struct GeneticExecution<T: PartialEq + Send + Sync, Ind: Genotype<T>> {
     /// The number of individuals in the population.
     population_size: usize,
     /// Population with all individuals and their respective fitnesses.
-    population: Vec<(Box<Ind>, Option<Fitness>)>,
+    population: Vec<(Ind, Option<Fitness>)>,
     /// Size of the genotype problem.
     genotype_size: Ind::ProblemSize,
     /// The mutation rate variation along iterations and progress.
-    mutation_rate: Box<MutationRate>,
+    mutation_rate: Box<dyn MutationRate>,
     /// The number of stages in the cup whose individuals are selected to crossover.
-    selection_rate: Box<SelectionRate>,
+    selection_rate: Box<dyn SelectionRate>,
     /// The selection function.
-    selection: Box<Selection>,
+    selection: Box<dyn Selection>,
     /// The age fitness decrease function.
-    age: Box<Age>,
+    age: Box<dyn Age>,
     /// The crossover function.
-    crossover: Box<Crossover<T, Ind>>,
+    crossover: Box<dyn Crossover<T, Ind>>,
     /// The function used to replace individuals in the population.
-    survival_pressure: Box<SurvivalPressure<T, Ind>>,
+    survival_pressure: Box<dyn SurvivalPressure<T, Ind>>,
     /// The stop criterion to finish execution.
-    stop_criterion: Box<StopCriterion>,
+    stop_criterion: Box<dyn StopCriterion>,
     /// Cache fitness value of individuals or compute it in each iteration.
     cache_fitness: bool,
     /// Progress log, writes statistics of the population every certain number of generations.
@@ -137,7 +137,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     /// Sets the initial population individuals. If lower individuals
     /// than population_size are received, the rest of population will be
     /// generated randomly.
-    pub fn population(mut self, new_pop: Vec<(Box<Ind>, Option<Fitness>)>) -> Self {
+    pub fn population(mut self, new_pop: Vec<(Ind, Option<Fitness>)>) -> Self {
         self.population = new_pop;
         self
     }
@@ -149,43 +149,46 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     }
 
     /// Sets the mutation rate.
-    pub fn mutation_rate(mut self, new_mut: Box<MutationRate>) -> Self {
+    pub fn mutation_rate(mut self, new_mut: Box<dyn MutationRate>) -> Self {
         self.mutation_rate = new_mut;
         self
     }
 
     /// Sets the number of tournament stages whose individuals are selected for crossover.
-    pub fn selection_rate(mut self, new_sel_rate: Box<SelectionRate>) -> Self {
+    pub fn selection_rate(mut self, new_sel_rate: Box<dyn SelectionRate>) -> Self {
         self.selection_rate = new_sel_rate;
         self
     }
 
     /// Sets the selection function of the genetic algorithm.
-    pub fn select_function(mut self, new_sel: Box<Selection>) -> Self {
+    pub fn select_function(mut self, new_sel: Box<dyn Selection>) -> Self {
         self.selection = new_sel;
         self
     }
 
     /// Sets the age function of the genetic algorithm.
-    pub fn age_function(mut self, new_age: Box<Age>) -> Self {
+    pub fn age_function(mut self, new_age: Box<dyn Age>) -> Self {
         self.age = new_age;
         self
     }
 
     /// Sets the crossover function of the genetic algorithm.
-    pub fn crossover_function(mut self, new_cross: Box<Crossover<T, Ind>>) -> Self {
+    pub fn crossover_function(mut self, new_cross: Box<dyn Crossover<T, Ind>>) -> Self {
         self.crossover = new_cross;
         self
     }
 
     /// Sets the survival pressure function of the genetic algorithm.
-    pub fn survival_pressure_function(mut self, new_surv: Box<SurvivalPressure<T, Ind>>) -> Self {
+    pub fn survival_pressure_function(
+        mut self,
+        new_surv: Box<dyn SurvivalPressure<T, Ind>>,
+    ) -> Self {
         self.survival_pressure = new_surv;
         self
     }
 
     /// Sets the stop criterion of the genetic algorithm.
-    pub fn stop_criterion(mut self, new_crit: Box<StopCriterion>) -> Self {
+    pub fn stop_criterion(mut self, new_crit: Box<dyn StopCriterion>) -> Self {
         self.stop_criterion = new_crit;
         self
     }
@@ -216,7 +219,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     /// - The number of generations run.
     /// - The average progress in the last generations.
     /// - The entire population in the last generation (useful for resuming the execution).
-    pub fn run(mut self) -> (Vec<Box<Ind>>, u64, f64, Vec<(Box<Ind>, Option<Fitness>)>) {
+    pub fn run(mut self) -> (Vec<Ind>, u64, f64, Vec<(Ind, Option<Fitness>)>) {
         let mut generation: u64 = 0;
         let mut last_progresses: Vec<f64> = Vec::new();
         let mut progress: f64 = std::f64::NAN;
@@ -228,7 +231,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         // Initialize randomly the population
         while self.population.len() < self.population_size {
             self.population
-                .push((Box::new(Ind::generate(&self.genotype_size)), None));
+                .push((Ind::generate(&self.genotype_size), None));
         }
         self.fix();
         let mut current_fitnesses = self.compute_fitnesses(true);
@@ -283,7 +286,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             self.update_age();
         }
 
-        let mut final_solutions: Vec<Box<Ind>> = Vec::new();
+        let mut final_solutions: Vec<Ind> = Vec::new();
         for i in solutions {
             final_solutions.push(self.population[i].0.clone());
         }
@@ -522,7 +525,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             s.send(crossed2).unwrap();
         });
         for child in receiver {
-            self.population.push((Box::new(child), None));
+            self.population.push((child, None));
         }
     }
 
