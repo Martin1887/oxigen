@@ -2,14 +2,14 @@
 //! survival_pressure functions.
 
 use genotype::Genotype;
-use Fitness;
+use IndWithFitness;
 
 /// This trait defines the kill function used to remove individuals at the end of a generation.
-pub trait SurvivalPressure<T, G: Genotype<T>>: Send + Sync {
+pub trait SurvivalPressure<T: PartialEq + Send + Sync, G: Genotype<T>>: Send + Sync {
     /// Returns the indexes of the individuals to be deleted according to the population size,
     /// the population and the fitness of the population. Population and fitness are sorted
     /// from bigger to lower fitness.
-    fn kill(&self, population_size: usize, population: &[(G, Option<Fitness>)]) -> Vec<usize>;
+    fn kill(&self, population_size: usize, population: &[IndWithFitness<T, G>]) -> Vec<usize>;
 }
 
 /// Provided survival pressure functions.
@@ -18,8 +18,10 @@ pub enum SurvivalPressureFunctions {
     Worst,
 }
 
-impl<T, G: Genotype<T>> SurvivalPressure<T, G> for SurvivalPressureFunctions {
-    fn kill(&self, population_size: usize, population: &[(G, Option<Fitness>)]) -> Vec<usize> {
+impl<T: PartialEq + Send + Sync, G: Genotype<T>> SurvivalPressure<T, G>
+    for SurvivalPressureFunctions
+{
+    fn kill(&self, population_size: usize, population: &[IndWithFitness<T, G>]) -> Vec<usize> {
         let mut killed = Vec::with_capacity(population_size);
         let mut i = population.len() - 1;
         while i >= population_size {

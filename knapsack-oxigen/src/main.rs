@@ -2,6 +2,7 @@ extern crate clap;
 extern crate oxigen;
 extern crate rand;
 
+use std::fmt::Debug;
 use clap::{App, Arg};
 use oxigen::prelude::*;
 use rand::distributions::Uniform;
@@ -40,6 +41,11 @@ impl Display for Knapsack {
             }
         }
         write!(f, "{}]", s)
+    }
+}
+impl Debug for Knapsack {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", self)
     }
 }
 
@@ -211,8 +217,9 @@ fn main() {
     for sol in &solutions {
         println!("{}", sol);
     }
-    println!("Population:");
+    println!("Population: {:?}", population);
+
     for ind in population {
-        println!("ind: {}", ind.0);
+        println!("ind: {}", ind);
     }
 }

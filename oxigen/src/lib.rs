@@ -25,6 +25,8 @@ pub use mutation_rate::*;
 pub use selection::*;
 pub use selection_rate::*;
 pub use slope_params::*;
+use std::fmt::Display;
+use std::marker::PhantomData;
 pub use stop_criteria::*;
 pub use survival_pressure::*;
 
@@ -61,12 +63,49 @@ const PROGRESS_HEADER: &[u8] = b"Generation\t\
     Fitness p75\t\
     Fitness p90\n";
 
+/// Struct that defines the fitness of each individual and the related information.
+#[derive(Copy, Clone, Debug)]
+pub struct Fitness {
+    /// Age of the individual.
+    age: u64,
+    /// Actual fitness.
+    fitness: f64,
+    /// Original fitness of the individual before being unfitnessed by age.
+    original_fitness: f64,
+}
+
+/// Struct that defines a pair of individual-fitness
+#[derive(Debug)]
+pub struct IndWithFitness<T: PartialEq + Send + Sync, Ind: Genotype<T>> {
+    /// Individual
+    ind: Ind,
+    /// Fitness (can be not computed yet)
+    fitness: Option<Fitness>,
+    _phantom: PhantomData<T>,
+}
+
+impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> IndWithFitness<T, Ind> {
+    pub fn new(ind: Ind, fitness: Option<Fitness>) -> IndWithFitness<T, Ind> {
+        IndWithFitness {
+            ind,
+            fitness,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> Display for IndWithFitness<T, Ind> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "ind: {}, fitness: {:?}", self.ind, self.fitness)
+    }
+}
+
 /// Struct that defines a genetic algorithm execution.
 pub struct GeneticExecution<T: PartialEq + Send + Sync, Ind: Genotype<T>> {
     /// The number of individuals in the population.
     population_size: usize,
     /// Population with all individuals and their respective fitnesses.
-    population: Vec<(Ind, Option<Fitness>)>,
+    population: Vec<IndWithFitness<T, Ind>>,
     /// Size of the genotype problem.
     genotype_size: Ind::ProblemSize,
     /// The mutation rate variation along iterations and progress.
@@ -89,17 +128,6 @@ pub struct GeneticExecution<T: PartialEq + Send + Sync, Ind: Genotype<T>> {
     progress_log: (u64, Option<File>),
     /// Population log, writes the population and fitnesses every certain number of generations.
     population_log: (u64, Option<File>),
-}
-
-/// Struct that defines the fitness of each individual and the related information.
-#[derive(Copy, Clone)]
-pub struct Fitness {
-    /// Age of the individual.
-    age: u64,
-    /// Actual fitness.
-    fitness: f64,
-    /// Original fitness of the individual before being unfitnessed by age.
-    original_fitness: f64,
 }
 
 impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> Default for GeneticExecution<T, Ind> {
@@ -137,7 +165,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     /// Sets the initial population individuals. If lower individuals
     /// than population_size are received, the rest of population will be
     /// generated randomly.
-    pub fn population(mut self, new_pop: Vec<(Ind, Option<Fitness>)>) -> Self {
+    pub fn population(mut self, new_pop: Vec<IndWithFitness<T, Ind>>) -> Self {
         self.population = new_pop;
         self
     }
@@ -219,7 +247,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     /// - The number of generations run.
     /// - The average progress in the last generations.
     /// - The entire population in the last generation (useful for resuming the execution).
-    pub fn run(mut self) -> (Vec<Ind>, u64, f64, Vec<(Ind, Option<Fitness>)>) {
+    pub fn run(mut self) -> (Vec<Ind>, u64, f64, Vec<IndWithFitness<T, Ind>>) {
         let mut generation: u64 = 0;
         let mut last_progresses: Vec<f64> = Vec::new();
         let mut progress: f64 = std::f64::NAN;
@@ -230,8 +258,10 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
 
         // Initialize randomly the population
         while self.population.len() < self.population_size {
-            self.population
-                .push((Ind::generate(&self.genotype_size), None));
+            self.population.push(IndWithFitness::new(
+                Ind::generate(&self.genotype_size),
+                None,
+            ));
         }
         self.fix();
         let mut current_fitnesses = self.compute_fitnesses(true);
@@ -288,7 +318,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
 
         let mut final_solutions: Vec<Ind> = Vec::new();
         for i in solutions {
-            final_solutions.push(self.population[i].0.clone());
+            final_solutions.push(self.population[i].ind.clone());
         }
         (final_solutions, generation, progress, self.population)
     }
@@ -302,14 +332,14 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                     format!(
                         "Individual: {}; fitness: {}, age: {}, original_fitness: {}\n",
                         i,
-                        ind.1.unwrap().fitness,
-                        ind.1.unwrap().age,
-                        ind.1.unwrap().original_fitness
+                        ind.fitness.unwrap().fitness,
+                        ind.fitness.unwrap().age,
+                        ind.fitness.unwrap().original_fitness
                     )
                     .as_bytes(),
                 )
                 .expect(POPULATION_ERR_MSG);
-                f.write_all(format!("{}\n\n", ind.0).as_bytes())
+                f.write_all(format!("{}\n\n", ind.ind).as_bytes())
                     .expect(POPULATION_ERR_MSG);
             }
             f.write_all(POPULATION_SEPARATOR).expect(POPULATION_ERR_MSG);
@@ -401,17 +431,17 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
 
     fn fix(&mut self) {
         self.population.par_iter_mut().for_each(|indwf| {
-            if indwf.0.fix() {
-                indwf.1 = None
+            if indwf.ind.fix() {
+                indwf.fitness = None
             }
         });
     }
 
     fn update_age(&mut self) {
-        self.population.par_iter_mut().for_each(|ind| {
-            if let Some(mut fit) = ind.1 {
+        self.population.par_iter_mut().for_each(|indwf| {
+            if let Some(mut fit) = indwf.fitness {
                 fit.age += 1;
-                ind.1 = Some(fit);
+                indwf.fitness = Some(fit);
             }
         });
     }
@@ -419,7 +449,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     fn get_fitnesses(&self) -> Vec<f64> {
         self.population
             .par_iter()
-            .map(|f| f.1.unwrap().fitness)
+            .map(|indwf| indwf.fitness.unwrap().fitness)
             .collect::<Vec<f64>>()
     }
 
@@ -428,10 +458,10 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         if self.cache_fitness || !refresh_on_nocache {
             self.population
                 .par_iter_mut()
-                .filter(|ind| ind.1.is_none())
-                .for_each(|ind| {
-                    let new_fit_value = ind.0.fitness();
-                    ind.1 = Some(Fitness {
+                .filter(|indwf| indwf.fitness.is_none())
+                .for_each(|indwf| {
+                    let new_fit_value = indwf.ind.fitness();
+                    indwf.fitness = Some(Fitness {
                         age: 0,
                         fitness: new_fit_value,
                         original_fitness: new_fit_value,
@@ -439,12 +469,12 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 });
             self.population
                 .par_iter_mut()
-                .filter(|ind| ind.1.is_some())
+                .filter(|ind| ind.fitness.is_some())
                 .for_each(|ind| {
-                    let fit = ind.1.unwrap();
+                    let fit = ind.fitness.unwrap();
                     let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
                     if age_exceed >= 0 {
-                        ind.1 = Some(Fitness {
+                        ind.fitness = Some(Fitness {
                             fitness: age_function
                                 .age_unfitness(age_exceed as u64, fit.original_fitness),
                             age: fit.age,
@@ -453,23 +483,23 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                     }
                 });
         } else {
-            self.population.par_iter_mut().for_each(|ind| {
-                let mut new_fit_value = ind.0.fitness();
-                match ind.1 {
+            self.population.par_iter_mut().for_each(|indwf| {
+                let mut new_fit_value = indwf.ind.fitness();
+                match indwf.fitness {
                     Some(fit) => {
                         let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
                         if age_exceed >= 0 {
                             new_fit_value =
                                 age_function.age_unfitness(age_exceed as u64, new_fit_value);
                         }
-                        ind.1 = Some(Fitness {
+                        indwf.fitness = Some(Fitness {
                             fitness: new_fit_value,
                             age: fit.age,
                             original_fitness: fit.original_fitness,
                         });
                     }
                     None => {
-                        ind.1 = Some(Fitness {
+                        indwf.fitness = Some(Fitness {
                             age: 0,
                             fitness: new_fit_value,
                             original_fitness: new_fit_value,
@@ -490,7 +520,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             .par_iter()
             .enumerate()
             .for_each_with(sender, |s, (i, ind)| {
-                if ind.0.is_solution(ind.1.unwrap().original_fitness) {
+                if ind.ind.is_solution(ind.fitness.unwrap().original_fitness) {
                     s.send(i).unwrap();
                 }
             });
@@ -518,25 +548,25 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 ind2 = SmallRng::from_entropy().sample(Uniform::from(0..selected.len()));
             }
             let (crossed1, crossed2) = self.crossover.cross(
-                &self.population[selected[ind1]].0,
-                &self.population[selected[ind2]].0,
+                &self.population[selected[ind1]].ind,
+                &self.population[selected[ind2]].ind,
             );
             s.send(crossed1).unwrap();
             s.send(crossed2).unwrap();
         });
         for child in receiver {
-            self.population.push((child, None));
+            self.population.push(IndWithFitness::new(child, None));
         }
     }
 
     fn mutate(&mut self, mutation_rate: f64) {
         self.population.par_iter_mut().for_each(|individual| {
             let mut rgen = SmallRng::from_entropy();
-            for gen in 0..individual.0.iter().len() {
+            for gen in 0..individual.ind.iter().len() {
                 let random: f64 = rgen.sample(Standard);
                 if random < mutation_rate {
-                    individual.0.mutate(&mut rgen, gen);
-                    individual.1 = None;
+                    individual.ind.mutate(&mut rgen, gen);
+                    individual.fitness = None;
                 }
             }
         });
@@ -553,10 +583,10 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
 
     fn sort_population(&mut self) {
         self.population.par_sort_unstable_by(|el1, el2| {
-            el2.1
+            el2.fitness
                 .unwrap()
                 .fitness
-                .partial_cmp(&el1.1.unwrap().fitness)
+                .partial_cmp(&el1.fitness.unwrap().fitness)
                 .unwrap()
         });
     }
