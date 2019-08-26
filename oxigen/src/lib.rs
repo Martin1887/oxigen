@@ -62,7 +62,7 @@ const PROGRESS_HEADER: &[u8] = b"Generation\t\
     Fitness p90\n";
 
 /// Struct that defines a genetic algorithm execution.
-pub struct GeneticExecution<T, Ind: Genotype<T>> {
+pub struct GeneticExecution<T: PartialEq + Send + Sync, Ind: Genotype<T>> {
     /// The number of individuals in the population.
     population_size: usize,
     /// Population with all individuals and their respective fitnesses.
@@ -102,7 +102,7 @@ pub struct Fitness {
     original_fitness: f64,
 }
 
-impl<T, Ind: Genotype<T>> Default for GeneticExecution<T, Ind> {
+impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> Default for GeneticExecution<T, Ind> {
     fn default() -> Self {
         GeneticExecution {
             population_size: 64,
@@ -122,7 +122,7 @@ impl<T, Ind: Genotype<T>> Default for GeneticExecution<T, Ind> {
     }
 }
 
-impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
+impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     /// Creates a new default genetic algorithm execution.
     pub fn new() -> Self {
         Self::default()

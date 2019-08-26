@@ -6,7 +6,6 @@ use rand::distributions::Uniform;
 use rand::prelude::*;
 use std::fmt::Display;
 use std::fs::File;
-use std::iter::FromIterator;
 
 #[derive(Clone)]
 struct QueensBoard(Vec<u8>);
@@ -29,17 +28,6 @@ impl Display for QueensBoard {
     }
 }
 
-impl FromIterator<u8> for QueensBoard {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = u8>,
-    {
-        QueensBoard {
-            0: iter.into_iter().collect(),
-        }
-    }
-}
-
 impl Genotype<u8> for QueensBoard {
     type ProblemSize = u8;
 
@@ -48,6 +36,9 @@ impl Genotype<u8> for QueensBoard {
     }
     fn into_iter(self) -> std::vec::IntoIter<u8> {
         self.0.into_iter()
+    }
+    fn from_iter<I: Iterator<Item = u8>>(&mut self, genes: I) {
+        self.0 = genes.collect();
     }
 
     fn generate(size: &Self::ProblemSize) -> Self {

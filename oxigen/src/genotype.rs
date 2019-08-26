@@ -9,7 +9,7 @@ use std::vec::IntoIter;
 /// This trait defines an individual of a population in the genetic algorithm.
 /// It defines the fitness and mutation functions and the type of the
 /// individual representation.
-pub trait Genotype<T>: FromIterator<T> + Display + Clone + Send + Sync {
+pub trait Genotype<T>: Display + Clone + Send + Sync {
     /// The type that represents the problem size of the genotype. For example,
     /// in the N Queens problem the size of the `ProblemSize` is a numeric type
     /// (the number of queens).
@@ -20,6 +20,9 @@ pub trait Genotype<T>: FromIterator<T> + Display + Clone + Send + Sync {
 
     /// Consumes the individual into an iterator over its genes.
     fn into_iter(self) -> IntoIter<T>;
+
+    /// Set the genes of the individual from an iterator.
+    fn from_iter<I: Iterator<Item = T>>(&mut self, I);
 
     /// Randomly initiailzes an individual.
     fn generate(size: &Self::ProblemSize) -> Self;
