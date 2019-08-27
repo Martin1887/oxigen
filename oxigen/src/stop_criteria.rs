@@ -11,7 +11,7 @@ pub trait StopCriterion: Send + Sync {
         &self,
         generation: u64,
         progress: f64,
-        n_solutions: u16,
+        n_solutions: usize,
         population_fitness: &[f64],
     ) -> bool;
 }
@@ -21,7 +21,7 @@ pub enum StopCriteria {
     /// Stop when a solution has been found.
     SolutionFound,
     /// Stop when this number of solutions have been found.
-    SolutionsFound(u16),
+    SolutionsFound(usize),
     /// Stop in a specific generation.
     Generation(u64),
     /// Stop when the mean progress in the last generations is lower than a specific threshold.
@@ -42,7 +42,7 @@ impl StopCriterion for StopCriteria {
         &self,
         generation: u64,
         progress: f64,
-        n_solutions: u16,
+        n_solutions: usize,
         population_fitness: &[f64],
     ) -> bool {
         match self {

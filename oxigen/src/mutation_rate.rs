@@ -11,7 +11,7 @@ pub trait MutationRate: Send + Sync {
         &self,
         generation: u64,
         progress: f64,
-        n_solutions: u16,
+        n_solutions: usize,
         population_fitness: &[f64],
     ) -> f64;
 }
@@ -31,7 +31,7 @@ impl MutationRate for MutationRates {
         &self,
         generation: u64,
         _progress: f64,
-        _n_solutions: u16,
+        _n_solutions: usize,
         _population_fitness: &[f64],
     ) -> f64 {
         match self {

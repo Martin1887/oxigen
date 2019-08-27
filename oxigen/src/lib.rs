@@ -270,24 +270,22 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             self.print_progress_header();
         }
 
-        while !self.stop_criterion.stop(
-            generation,
-            progress,
-            solutions.len() as u16,
-            &current_fitnesses,
-        ) {
+        while !self
+            .stop_criterion
+            .stop(generation, progress, solutions.len(), &current_fitnesses)
+        {
             generation += 1;
 
             mutation_rate = self.mutation_rate.rate(
                 generation,
                 progress,
-                solutions.len() as u16,
+                solutions.len(),
                 &current_fitnesses,
             );
             selection_rate = self.selection_rate.rate(
                 generation,
                 progress,
-                solutions.len() as u16,
+                solutions.len(),
                 &current_fitnesses,
             );
 
