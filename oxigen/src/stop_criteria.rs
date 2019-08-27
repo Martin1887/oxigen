@@ -22,6 +22,9 @@ pub enum StopCriteria {
     SolutionFound,
     /// Stop when this number of solutions have been found.
     SolutionsFound(usize),
+    /// Stop when the specified solutions have been found or a specific generation,
+    /// what happens before
+    SolutionsFoundOrGeneration(usize, u64),
     /// Stop in a specific generation.
     Generation(u64),
     /// Stop when the mean progress in the last generations is lower than a specific threshold.
@@ -48,6 +51,7 @@ impl StopCriterion for StopCriteria {
         match self {
             StopCriteria::SolutionFound => n_solutions > 0,
             StopCriteria::SolutionsFound(i) => n_solutions >= *i,
+            StopCriteria::SolutionsFoundOrGeneration(i, g) => n_solutions >= *i || generation >= *g,
             StopCriteria::Generation(g) => generation >= *g,
             StopCriteria::Progress(p) => progress <= *p,
             StopCriteria::GenerationAndProgress(g, p) => generation >= *g && progress <= *p,
