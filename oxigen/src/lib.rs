@@ -264,7 +264,8 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             ));
         }
         self.fix();
-        let mut current_fitnesses = self.compute_fitnesses(true);
+        self.compute_fitnesses(true);
+        let mut current_fitnesses = self.get_fitnesses();
 
         if self.progress_log.0 > 0 {
             self.print_progress_header();
@@ -276,25 +277,21 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         {
             generation += 1;
 
-            mutation_rate = self.mutation_rate.rate(
-                generation,
-                progress,
-                solutions.len(),
-                &current_fitnesses,
-            );
-            selection_rate = self.selection_rate.rate(
-                generation,
-                progress,
-                solutions.len(),
-                &current_fitnesses,
-            );
+            mutation_rate =
+                self.mutation_rate
+                    .rate(generation, progress, solutions.len(), &current_fitnesses);
+            selection_rate =
+                self.selection_rate
+                    .rate(generation, progress, solutions.len(), &current_fitnesses);
 
-            current_fitnesses = self.compute_fitnesses(true);
+            self.compute_fitnesses(true);
+            current_fitnesses = self.get_fitnesses();
             let selected = self.selection.select(&current_fitnesses, selection_rate);
             self.cross(&selected);
             self.mutate(mutation_rate);
             self.fix();
             self.compute_fitnesses(false);
+            self.age_unfitness();
             self.sort_population();
             self.survival_pressure_kill();
 
@@ -451,8 +448,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             .collect::<Vec<f64>>()
     }
 
-    fn compute_fitnesses(&mut self, refresh_on_nocache: bool) -> Vec<f64> {
-        let age_function = &self.age;
+    fn compute_fitnesses(&mut self, refresh_on_nocache: bool) {
         if self.cache_fitness || !refresh_on_nocache {
             self.population
                 .par_iter_mut()
@@ -465,31 +461,11 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                         original_fitness: new_fit_value,
                     });
                 });
-            self.population
-                .par_iter_mut()
-                .filter(|ind| ind.fitness.is_some())
-                .for_each(|ind| {
-                    let fit = ind.fitness.unwrap();
-                    let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
-                    if age_exceed >= 0 {
-                        ind.fitness = Some(Fitness {
-                            fitness: age_function
-                                .age_unfitness(age_exceed as u64, fit.original_fitness),
-                            age: fit.age,
-                            original_fitness: fit.original_fitness,
-                        });
-                    }
-                });
         } else {
             self.population.par_iter_mut().for_each(|indwf| {
-                let mut new_fit_value = indwf.ind.fitness();
+                let new_fit_value = indwf.ind.fitness();
                 match indwf.fitness {
                     Some(fit) => {
-                        let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
-                        if age_exceed >= 0 {
-                            new_fit_value =
-                                age_function.age_unfitness(age_exceed as u64, new_fit_value);
-                        }
                         indwf.fitness = Some(Fitness {
                             fitness: new_fit_value,
                             age: fit.age,
@@ -506,8 +482,22 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 }
             });
         }
+    }
 
-        self.get_fitnesses()
+    fn age_unfitness(&mut self) {
+        let age_function = &self.age;
+        self.population.par_iter_mut().for_each(|indwf| {
+            if let Some(fit) = indwf.fitness {
+                let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
+                if age_exceed >= 0 {
+                    indwf.fitness = Some(Fitness {
+                        fitness: age_function.age_unfitness(age_exceed as u64, fit.fitness),
+                        age: fit.age,
+                        original_fitness: fit.original_fitness,
+                    });
+                }
+            }
+        });
     }
 
     fn get_solutions(&self) -> Vec<usize> {
