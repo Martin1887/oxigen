@@ -502,21 +502,43 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
 
     fn get_solutions(&self) -> Vec<usize> {
         let mut solutions = Vec::new();
+        let mut solutions_individuals = Vec::new();
         let (sender, receiver) = channel();
 
         self.population
             .par_iter()
             .enumerate()
-            .for_each_with(sender, |s, (i, ind)| {
-                if ind.ind.is_solution(ind.fitness.unwrap().original_fitness) {
-                    s.send(i).unwrap();
+            .for_each_with(sender, |s, (i, indwf)| {
+                if indwf
+                    .ind
+                    .is_solution(indwf.fitness.unwrap().original_fitness)
+                {
+                    s.send((i, indwf.ind.clone())).unwrap();
                 }
             });
-        for sol in receiver {
-            solutions.push(sol);
+        for (index, sol) in receiver {
+            if Self::not_found_yet_solution(&solutions_individuals, &sol) {
+                solutions_individuals.push(sol);
+                solutions.push(index);
+            }
         }
 
         solutions
+    }
+
+    #[allow(clippy::never_loop)]
+    fn not_found_yet_solution(solutions: &[Ind], other: &Ind) -> bool {
+        let (sender, receiver) = channel();
+        solutions.par_iter().for_each_with(sender, |s, ind| {
+            if other.distance(ind) == 0.0 {
+                s.send(true).unwrap();
+            }
+        });
+        for _found in receiver {
+            return false;
+        }
+
+        true
     }
 
     fn cross(&mut self, selected: &[usize]) {

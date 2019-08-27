@@ -8,7 +8,7 @@ use std::vec::IntoIter;
 /// This trait defines an individual of a population in the genetic algorithm.
 /// It defines the fitness and mutation functions and the type of the
 /// individual representation.
-pub trait Genotype<T>: Display + Clone + Send + Sync {
+pub trait Genotype<T: PartialEq>: Display + Clone + Send + Sync {
     /// The type that represents the problem size of the genotype. For example,
     /// in the N Queens problem the size of the `ProblemSize` is a numeric type
     /// (the number of queens).
@@ -45,5 +45,18 @@ pub trait Genotype<T>: Display + Clone + Send + Sync {
     /// returns true the fitness is recomputed.
     fn fix(&mut self) -> bool {
         false
+    }
+
+    /// A function to define how different is the individual from another one.
+    /// The default implementation sums the number of different genes and divides
+    /// it by the total number of genes. This
+    /// function is used to determine if solutions are different and in some
+    /// survival pressure functions.
+    fn distance(&self, other: &Self) -> f64 {
+        self.iter()
+            .zip(other.iter())
+            .filter(|(gen, gen_other)| gen != gen_other)
+            .count() as f64
+            / self.iter().len() as f64
     }
 }
