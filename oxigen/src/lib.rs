@@ -548,13 +548,13 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     }
 
     fn mutate(&mut self, mutation_rate: f64) {
-        self.population.par_iter_mut().for_each(|individual| {
+        self.population.par_iter_mut().for_each(|indwf| {
             let mut rgen = SmallRng::from_entropy();
-            for gen in 0..individual.ind.iter().len() {
+            for gen in 0..indwf.ind.iter().len() {
                 let random: f64 = rgen.sample(Standard);
                 if random < mutation_rate {
-                    individual.ind.mutate(&mut rgen, gen);
-                    individual.fitness = None;
+                    indwf.ind.mutate(&mut rgen, gen);
+                    indwf.fitness = None;
                 }
             }
         });
