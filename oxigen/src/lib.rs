@@ -11,6 +11,8 @@ pub mod age;
 pub mod crossover;
 pub mod genotype;
 pub mod mutation_rate;
+pub mod niches_beta_rate;
+pub mod population_refitness;
 pub mod prelude;
 pub mod selection;
 pub mod selection_rate;
@@ -22,6 +24,8 @@ pub use age::*;
 pub use crossover::*;
 pub use genotype::Genotype;
 pub use mutation_rate::*;
+pub use niches_beta_rate::*;
+pub use population_refitness::*;
 pub use selection::*;
 pub use selection_rate::*;
 pub use slope_params::*;
@@ -118,6 +122,9 @@ pub struct GeneticExecution<T: PartialEq + Send + Sync, Ind: Genotype<T>> {
     age: Box<dyn Age>,
     /// The crossover function.
     crossover: Box<dyn Crossover<T, Ind>>,
+    /// The funciton used to reompute the fitness using the full population just
+    /// before survival pressure.
+    population_refitness: Box<dyn PopulationRefitness<T, Ind>>,
     /// The function used to replace individuals in the population.
     survival_pressure: Box<dyn SurvivalPressure<T, Ind>>,
     /// The stop criterion to finish execution.
@@ -141,6 +148,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> Default for GeneticExecution<
             selection: Box::new(SelectionFunctions::Cup),
             age: Box::new(AgeFunctions::None),
             crossover: Box::new(CrossoverFunctions::SingleCrossPoint),
+            population_refitness: Box::new(PopulationRefitnessFunctions::None),
             survival_pressure: Box::new(SurvivalPressureFunctions::Worst),
             stop_criterion: Box::new(StopCriteria::SolutionFound),
             cache_fitness: true,
@@ -203,6 +211,15 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     /// Sets the crossover function of the genetic algorithm.
     pub fn crossover_function(mut self, new_cross: Box<dyn Crossover<T, Ind>>) -> Self {
         self.crossover = new_cross;
+        self
+    }
+
+    /// Sets the population refitness function of the genetic algorithm.
+    pub fn population_refitness_function(
+        mut self,
+        new_refit: Box<dyn PopulationRefitness<T, Ind>>,
+    ) -> Self {
+        self.population_refitness = new_refit;
         self
     }
 
@@ -285,12 +302,14 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                     .rate(generation, progress, solutions.len(), &current_fitnesses);
 
             self.compute_fitnesses(true);
+            self.refitness(generation, progress, solutions.len());
             current_fitnesses = self.get_fitnesses();
             let selected = self.selection.select(&current_fitnesses, selection_rate);
             self.cross(&selected);
             self.mutate(mutation_rate);
             self.fix();
             self.compute_fitnesses(false);
+            self.refitness(generation, progress, solutions.len());
             self.age_unfitness();
             self.sort_population();
             self.survival_pressure_kill();
@@ -580,6 +599,39 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 }
             }
         });
+    }
+
+    fn refitness(&mut self, generation: u64, progress: f64, n_solutions: usize) {
+        let (sender, receiver) = channel();
+
+        self.population
+            .par_iter()
+            .enumerate()
+            .for_each_with(sender, |s, (i, indwf)| {
+                if let Some(fit) = indwf.fitness {
+                    let new_fit = self.population_refitness.population_refitness(
+                        i,
+                        &self.population,
+                        generation,
+                        progress,
+                        n_solutions,
+                    );
+                    if (new_fit - fit.fitness).abs() > 0.000_001 {
+                        s.send((
+                            i,
+                            Some(Fitness {
+                                fitness: new_fit,
+                                age: fit.age,
+                                original_fitness: fit.original_fitness,
+                            }),
+                        ))
+                        .unwrap()
+                    }
+                }
+            });
+        for (i, fit) in receiver {
+            self.population[i].fitness = fit;
+        }
     }
 
     fn survival_pressure_kill(&mut self) {
