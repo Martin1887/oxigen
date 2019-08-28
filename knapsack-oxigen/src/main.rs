@@ -2,12 +2,12 @@ extern crate clap;
 extern crate oxigen;
 extern crate rand;
 
-use std::fmt::Debug;
 use clap::{App, Arg};
 use oxigen::prelude::*;
 use rand::distributions::Uniform;
 use rand::prelude::*;
 use rand::rngs::SmallRng;
+use std::fmt::Debug;
 use std::fmt::Display;
 use std::fs::File;
 
@@ -156,7 +156,7 @@ fn main() {
         File::create("population.txt").expect("Error creating population log file");
     let population_size = 64 as usize;
     let capacity = matches.value_of("capacity").unwrap().parse().unwrap();
-    let mut items = Vec::new();;
+    let mut items = Vec::new();
     if matches.is_present("n_items") {
         let mut rgen = SmallRng::from_entropy();
         let n_items = matches.value_of("n_items").unwrap().parse().unwrap();
