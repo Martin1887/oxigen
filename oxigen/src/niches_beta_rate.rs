@@ -17,8 +17,8 @@ pub enum NichesBetaRates {
     Constant(f64),
     /// Linear function of iterations.
     Linear(SlopeParams),
-    /// Cuadratic function of iterations.
-    Cuadratic(SlopeParams),
+    /// Quadratic function of iterations.
+    Quadratic(SlopeParams),
 }
 
 impl NichesBetaRate for NichesBetaRates {
@@ -26,7 +26,7 @@ impl NichesBetaRate for NichesBetaRates {
         match self {
             Constant(c) => *c,
             Linear(sp) => sp.check_bound(sp.coefficient * generation as f64 + sp.start),
-            Cuadratic(sp) => {
+            Quadratic(sp) => {
                 sp.check_bound(sp.coefficient * generation as f64 * generation as f64 + sp.start)
             }
         }

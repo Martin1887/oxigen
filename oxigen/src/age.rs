@@ -35,8 +35,8 @@ pub enum AgeFunctions {
     None,
     /// Linear function of iterations.
     Linear(AgeThreshold, AgeSlope),
-    /// Cuadratic function of iterations.
-    Cuadratic(AgeThreshold, AgeSlope),
+    /// Quadratic function of iterations.
+    Quadratic(AgeThreshold, AgeSlope),
 }
 
 impl Age for AgeFunctions {
@@ -44,7 +44,7 @@ impl Age for AgeFunctions {
         match self {
             None => 0,
             Linear(threshold, _) => threshold.0,
-            Cuadratic(threshold, _) => threshold.0,
+            Quadratic(threshold, _) => threshold.0,
         }
     }
 
@@ -52,7 +52,7 @@ impl Age for AgeFunctions {
         match self {
             None => fitness,
             Linear(_, sp) => fitness - sp.0 * age_generations as f64,
-            Cuadratic(_, sp) => fitness - sp.0 * age_generations as f64 * age_generations as f64,
+            Quadratic(_, sp) => fitness - sp.0 * age_generations as f64 * age_generations as f64,
         }
     }
 }

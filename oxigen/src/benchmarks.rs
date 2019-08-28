@@ -50,6 +50,9 @@ impl Genotype<u8> for QueensBoard {
     fn into_iter(self) -> std::vec::IntoIter<u8> {
         self.0.into_iter()
     }
+    fn from_iter<I: Iterator<Item = u8>>(&mut self, genes: I) {
+        self.0 = genes.collect();
+    }
 
     fn generate(size: &Self::ProblemSize) -> Self {
         let mut individual = Vec::with_capacity(*size as usize);
@@ -81,7 +84,6 @@ impl Genotype<u8> for QueensBoard {
         }
 
         for (row, queen) in self.0.iter().enumerate() {
-            // println!("row: {}, queen: {}", row, queen);
             let mut collision = if verticals[*queen as usize] { 1 } else { 0 };
             verticals[*queen as usize] = true;
 
@@ -146,12 +148,13 @@ fn bench_selection_cup_255inds(b: &mut Bencher) {
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
-    let current_fitnesses = gen_exec.compute_fitnesses(true);
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
     b.iter(|| {
         gen_exec.selection.select(&current_fitnesses, 8);
     });
@@ -172,12 +175,13 @@ fn bench_selection_tournaments_256inds(b: &mut Bencher) {
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
-    let current_fitnesses = gen_exec.compute_fitnesses(true);
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
     b.iter(|| {
         gen_exec
             .selection
@@ -198,12 +202,13 @@ fn bench_selection_roulette_256inds(b: &mut Bencher) {
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
-    let current_fitnesses = gen_exec.compute_fitnesses(true);
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
     b.iter(|| {
         gen_exec
             .selection
@@ -224,8 +229,8 @@ fn bench_cross_single_point_255inds(b: &mut Bencher) {
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
@@ -250,8 +255,8 @@ fn bench_cross_multi_point_255inds(b: &mut Bencher) {
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
@@ -276,8 +281,8 @@ fn bench_cross_uniform_255inds(b: &mut Bencher) {
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
@@ -302,8 +307,8 @@ fn bench_not_cached_fitness_1024inds(b: &mut Bencher) {
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
@@ -324,15 +329,15 @@ fn bench_fitness_1024inds(b: &mut Bencher) {
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
     b.iter(|| {
         gen_exec.compute_fitnesses(true);
         for ind in &mut gen_exec.population {
-            ind.1 = None;
+            ind.fitness = None;
         }
     });
 }
@@ -346,7 +351,7 @@ fn bench_not_cached_fitness_age_1024inds(b: &mut Bencher) {
         GeneticExecution::<u8, QueensBoard>::new()
             .population_size(population_size)
             .genotype_size(n_queens as u8)
-            .age_function(Box::new(AgeFunctions::Cuadratic(
+            .age_function(Box::new(AgeFunctions::Quadratic(
                 AgeThreshold(0),
                 AgeSlope(1_f64),
             )))
@@ -354,14 +359,15 @@ fn bench_not_cached_fitness_age_1024inds(b: &mut Bencher) {
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
     gen_exec.compute_fitnesses(true);
     b.iter(|| {
         gen_exec.compute_fitnesses(true);
+        gen_exec.age_unfitness();
     });
 }
 
@@ -374,21 +380,22 @@ fn bench_fitness_age_1024inds(b: &mut Bencher) {
         GeneticExecution::<u8, QueensBoard>::new()
             .population_size(population_size)
             .genotype_size(n_queens as u8)
-            .age_function(Box::new(AgeFunctions::Cuadratic(
+            .age_function(Box::new(AgeFunctions::Quadratic(
                 AgeThreshold(0),
                 AgeSlope(1_f64),
             ))),
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
     gen_exec.compute_fitnesses(true);
     b.iter(|| {
         gen_exec.compute_fitnesses(false);
+        gen_exec.age_unfitness();
     });
 }
 
@@ -404,8 +411,8 @@ fn bench_get_fitnesses_1024inds(b: &mut Bencher) {
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
@@ -427,12 +434,13 @@ fn bench_update_progress_1024inds(b: &mut Bencher) {
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
-    let current_fitnesses = gen_exec.compute_fitnesses(true);
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
     let mut last_progresses: Vec<f64> = Vec::new();
     let last_best = 0_f64;
     let best = current_fitnesses[0];
@@ -453,8 +461,8 @@ fn bench_get_solutions_1024inds(b: &mut Bencher) {
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
@@ -465,47 +473,447 @@ fn bench_get_solutions_1024inds(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_survival_pressure_255inds(b: &mut Bencher) {
+fn bench_survival_pressure_worst_255inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
     let mut gen_exec = test::black_box(
         GeneticExecution::<u8, QueensBoard>::new()
             .population_size(population_size)
-            .genotype_size(n_queens as u8),
+            .genotype_size(n_queens as u8)
+            .survival_pressure_function(Box::new(SurvivalPressureFunctions::Worst)),
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
     gen_exec.compute_fitnesses(true);
-    b.iter(|| {
-        gen_exec.survival_pressure_kill();
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
+    let mut parents_children = Vec::with_capacity(selected.len() / 2);
+    let mut i = 0;
+    while parents_children.len() < selected.len() / 2 {
+        parents_children.push(Reproduction {
+            parents: (selected[i * 2], selected[i * 2 + 1]),
+            children: (selected[i * 2] + 1, selected[i * 2 + 1] + 1),
+        });
+        i += 1;
+    }
+    let population_children_size = population_size + 255;
+    // add dummy individuals until reach the initial number of individuals
+    while gen_exec.population.len() < population_children_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard { 0: vec![0; 255] },
+            Some(Fitness {
+                age: 0,
+                fitness: 0.0,
+                original_fitness: 0.0,
+            }),
+        ));
+    }
+    b.iter(move || {
+        gen_exec.survival_pressure_kill(&parents_children);
+        // add dummy individuals until reach the initial number of individuals
+        while gen_exec.population.len() < population_children_size {
+            gen_exec.population.push(IndWithFitness::new(
+                QueensBoard { 0: vec![0; 255] },
+                Some(Fitness {
+                    age: 0,
+                    fitness: 0.0,
+                    original_fitness: 0.0,
+                }),
+            ));
+        }
     });
 }
 
 #[bench]
-fn bench_sort_population_1024inds(b: &mut Bencher) {
+fn bench_survival_pressure_children_replace_most_similar_255inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
     let mut gen_exec = test::black_box(
         GeneticExecution::<u8, QueensBoard>::new()
             .population_size(population_size)
-            .genotype_size(n_queens as u8),
+            .genotype_size(n_queens as u8)
+            .survival_pressure_function(Box::new(
+                SurvivalPressureFunctions::ChildrenReplaceMostSimilar,
+            )),
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
-        gen_exec.population.push((
-            Box::new(QueensBoard::generate(&gen_exec.genotype_size)),
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
             None,
         ));
     }
     gen_exec.compute_fitnesses(true);
-    b.iter(|| {
-        gen_exec.sort_population();
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
+    let mut parents_children = Vec::with_capacity(selected.len() / 2);
+    let mut i = 0;
+    while parents_children.len() < selected.len() / 2 {
+        parents_children.push(Reproduction {
+            parents: (selected[i * 2], selected[i * 2 + 1]),
+            children: (selected[i * 2] + 1, selected[i * 2 + 1] + 1),
+        });
+        i += 1;
+    }
+    let population_children_size = population_size + 255;
+    // add dummy individuals until reach the initial number of individuals
+    while gen_exec.population.len() < population_children_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard { 0: vec![0; 255] },
+            Some(Fitness {
+                age: 0,
+                fitness: 0.0,
+                original_fitness: 0.0,
+            }),
+        ));
+    }
+    b.iter(move || {
+        gen_exec.survival_pressure_kill(&parents_children);
+        // add dummy individuals until reach the initial number of individuals
+        while gen_exec.population.len() < population_children_size {
+            gen_exec.population.push(IndWithFitness::new(
+                QueensBoard { 0: vec![0; 255] },
+                Some(Fitness {
+                    age: 0,
+                    fitness: 0.0,
+                    original_fitness: 0.0,
+                }),
+            ));
+        }
+    });
+}
+
+#[bench]
+fn bench_survival_pressure_children_replace_parents_255inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .survival_pressure_function(Box::new(
+                SurvivalPressureFunctions::ChildrenReplaceParents,
+            )),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
+    let mut parents_children = Vec::with_capacity(selected.len() / 2);
+    let mut i = 0;
+    while parents_children.len() < selected.len() / 2 {
+        parents_children.push(Reproduction {
+            parents: (selected[i * 2], selected[i * 2 + 1]),
+            children: (selected[i * 2] + 1, selected[i * 2 + 1] + 1),
+        });
+        i += 1;
+    }
+    let population_children_size = population_size + 255;
+    // add dummy individuals until reach the initial number of individuals
+    while gen_exec.population.len() < population_children_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard { 0: vec![0; 255] },
+            Some(Fitness {
+                age: 0,
+                fitness: 0.0,
+                original_fitness: 0.0,
+            }),
+        ));
+    }
+    b.iter(move || {
+        gen_exec.survival_pressure_kill(&parents_children);
+        // add dummy individuals until reach the initial number of individuals
+        while gen_exec.population.len() < population_children_size {
+            gen_exec.population.push(IndWithFitness::new(
+                QueensBoard { 0: vec![0; 255] },
+                Some(Fitness {
+                    age: 0,
+                    fitness: 0.0,
+                    original_fitness: 0.0,
+                }),
+            ));
+        }
+    });
+}
+
+#[bench]
+fn bench_survival_pressure_children_fight_most_similar_255inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .survival_pressure_function(Box::new(
+                SurvivalPressureFunctions::ChildrenFightMostSimilar,
+            )),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
+    let mut parents_children = Vec::with_capacity(selected.len() / 2);
+    let mut i = 0;
+    while parents_children.len() < selected.len() / 2 {
+        parents_children.push(Reproduction {
+            parents: (selected[i * 2], selected[i * 2 + 1]),
+            children: (selected[i * 2] + 1, selected[i * 2 + 1] + 1),
+        });
+        i += 1;
+    }
+    let population_children_size = population_size + 255;
+    // add dummy individuals until reach the initial number of individuals
+    while gen_exec.population.len() < population_children_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard { 0: vec![0; 255] },
+            Some(Fitness {
+                age: 0,
+                fitness: 0.0,
+                original_fitness: 0.0,
+            }),
+        ));
+    }
+    b.iter(move || {
+        gen_exec.survival_pressure_kill(&parents_children);
+        // add dummy individuals until reach the initial number of individuals
+        while gen_exec.population.len() < population_children_size {
+            gen_exec.population.push(IndWithFitness::new(
+                QueensBoard { 0: vec![0; 255] },
+                Some(Fitness {
+                    age: 0,
+                    fitness: 0.0,
+                    original_fitness: 0.0,
+                }),
+            ));
+        }
+    });
+}
+
+#[bench]
+fn bench_survival_pressure_children_fight_parents_255inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .survival_pressure_function(Box::new(SurvivalPressureFunctions::ChildrenFightParents)),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
+    let mut parents_children = Vec::with_capacity(selected.len() / 2);
+    let mut i = 0;
+    while parents_children.len() < selected.len() / 2 {
+        parents_children.push(Reproduction {
+            parents: (selected[i * 2], selected[i * 2 + 1]),
+            children: (selected[i * 2] + 1, selected[i * 2 + 1] + 1),
+        });
+        i += 1;
+    }
+    let population_children_size = population_size + 255;
+    // add dummy individuals until reach the initial number of individuals
+    while gen_exec.population.len() < population_children_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard { 0: vec![0; 255] },
+            Some(Fitness {
+                age: 0,
+                fitness: 0.0,
+                original_fitness: 0.0,
+            }),
+        ));
+    }
+    b.iter(move || {
+        gen_exec.survival_pressure_kill(&parents_children);
+        // add dummy individuals until reach the initial number of individuals
+        while gen_exec.population.len() < population_children_size {
+            gen_exec.population.push(IndWithFitness::new(
+                QueensBoard { 0: vec![0; 255] },
+                Some(Fitness {
+                    age: 0,
+                    fitness: 0.0,
+                    original_fitness: 0.0,
+                }),
+            ));
+        }
+    });
+}
+
+#[bench]
+fn bench_survival_pressure_children_replace_parents_and_the_rest_random_most_similar_255inds(
+    b: &mut Bencher,
+) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .survival_pressure_function(Box::new(
+                SurvivalPressureFunctions::ChildrenReplaceParentsAndTheRestRandomMostSimilar,
+            )),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
+    let mut parents_children = Vec::with_capacity(selected.len() / 2);
+    let mut i = 0;
+    while parents_children.len() < selected.len() / 2 {
+        parents_children.push(Reproduction {
+            parents: (selected[i * 2], selected[i * 2 + 1]),
+            children: (selected[i * 2] + 1, selected[i * 2 + 1] + 1),
+        });
+        i += 1;
+    }
+    let population_children_size = population_size + 255;
+    // add dummy individuals until reach the initial number of individuals
+    while gen_exec.population.len() < population_children_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard { 0: vec![0; 255] },
+            Some(Fitness {
+                age: 0,
+                fitness: 0.0,
+                original_fitness: 0.0,
+            }),
+        ));
+    }
+    b.iter(move || {
+        gen_exec.survival_pressure_kill(&parents_children);
+        // add dummy individuals until reach the initial number of individuals
+        while gen_exec.population.len() < population_children_size {
+            gen_exec.population.push(IndWithFitness::new(
+                QueensBoard { 0: vec![0; 255] },
+                Some(Fitness {
+                    age: 0,
+                    fitness: 0.0,
+                    original_fitness: 0.0,
+                }),
+            ));
+        }
+    });
+}
+
+#[bench]
+fn bench_survival_pressure_children_replace_parents_and_the_rest_most_similar_255inds(
+    b: &mut Bencher,
+) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .survival_pressure_function(Box::new(
+                SurvivalPressureFunctions::ChildrenReplaceParentsAndTheRestMostSimilar,
+            )),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
+    let mut parents_children = Vec::with_capacity(selected.len() / 2);
+    let mut i = 0;
+    while parents_children.len() < selected.len() / 2 {
+        parents_children.push(Reproduction {
+            parents: (selected[i * 2], selected[i * 2 + 1]),
+            children: (selected[i * 2] + 1, selected[i * 2 + 1] + 1),
+        });
+        i += 1;
+    }
+    let population_children_size = population_size + 255;
+    // add dummy individuals until reach the initial number of individuals
+    while gen_exec.population.len() < population_children_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard { 0: vec![0; 255] },
+            Some(Fitness {
+                age: 0,
+                fitness: 0.0,
+                original_fitness: 0.0,
+            }),
+        ));
+    }
+    b.iter(move || {
+        gen_exec.survival_pressure_kill(&parents_children);
+        // add dummy individuals until reach the initial number of individuals
+        while gen_exec.population.len() < population_children_size {
+            gen_exec.population.push(IndWithFitness::new(
+                QueensBoard { 0: vec![0; 255] },
+                Some(Fitness {
+                    age: 0,
+                    fitness: 0.0,
+                    original_fitness: 0.0,
+                }),
+            ));
+        }
+    });
+}
+
+#[bench]
+#[allow(clippy::unit_arg)]
+fn bench_distance_255(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let population_size = 255_usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .survival_pressure_function(Box::new(SurvivalPressureFunctions::Worst)),
+    );
+    gen_exec.population = test::black_box(Vec::new());
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    b.iter(move || {
+        test::black_box(gen_exec.population.par_iter().for_each(|ind| {
+            let _dist = gen_exec.population[0].ind.distance(&ind.ind);
+        }))
     });
 }

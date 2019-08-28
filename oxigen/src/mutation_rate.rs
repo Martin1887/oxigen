@@ -22,8 +22,8 @@ pub enum MutationRates {
     Constant(f64),
     /// Linear function of generations.
     Linear(SlopeParams),
-    /// Cuadratic function of generations.
-    Cuadratic(SlopeParams),
+    /// Quadratic function of generations.
+    Quadratic(SlopeParams),
 }
 
 impl MutationRate for MutationRates {
@@ -37,7 +37,7 @@ impl MutationRate for MutationRates {
         match self {
             Constant(c) => *c,
             Linear(sp) => sp.check_bound(sp.coefficient * generation as f64 + sp.start),
-            Cuadratic(sp) => {
+            Quadratic(sp) => {
                 sp.check_bound(sp.coefficient * generation as f64 * generation as f64 + sp.start)
             }
         }

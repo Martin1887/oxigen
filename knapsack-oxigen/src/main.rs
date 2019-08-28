@@ -201,7 +201,7 @@ fn main() {
         })))
         .select_function(Box::new(SelectionFunctions::Cup))
         .crossover_function(Box::new(CrossoverFunctions::UniformCross))
-        .age_function(Box::new(AgeFunctions::Cuadratic(
+        .age_function(Box::new(AgeFunctions::Quadratic(
             AgeThreshold(2),
             AgeSlope(4_f64),
         )))

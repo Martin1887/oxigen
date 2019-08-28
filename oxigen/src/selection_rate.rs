@@ -22,8 +22,8 @@ pub enum SelectionRates {
     Constant(usize),
     /// Linear function of iterations.
     Linear(SlopeParams),
-    /// Cuadratic function of iterations.
-    Cuadratic(SlopeParams),
+    /// Quadratic function of iterations.
+    Quadratic(SlopeParams),
 }
 
 impl SelectionRate for SelectionRates {
@@ -39,7 +39,7 @@ impl SelectionRate for SelectionRates {
             Linear(sp) => sp
                 .check_bound(sp.coefficient * generation as f64 + sp.start)
                 .ceil() as usize,
-            Cuadratic(sp) => sp
+            Quadratic(sp) => sp
                 .check_bound(sp.coefficient * generation as f64 * generation as f64 + sp.start)
                 .ceil() as usize,
         }
