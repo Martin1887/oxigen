@@ -305,14 +305,13 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             self.refitness(generation, progress, solutions.len());
             current_fitnesses = self.get_fitnesses();
             let selected = self.selection.select(&current_fitnesses, selection_rate);
-            self.cross(&selected);
+            let parents_children = self.cross(&selected);
             self.mutate(mutation_rate);
             self.fix();
             self.compute_fitnesses(false);
             self.refitness(generation, progress, solutions.len());
             self.age_unfitness();
-            self.sort_population();
-            self.survival_pressure_kill();
+            self.survival_pressure_kill(&parents_children);
 
             current_fitnesses = self.get_fitnesses();
             solutions = self.get_solutions();
@@ -560,12 +559,14 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         true
     }
 
-    fn cross(&mut self, selected: &[usize]) {
+    fn cross(&mut self, selected: &[usize]) -> Vec<Reproduction> {
+        let reprs_number = (selected.len() + 1) / 2;
+        let mut reprs = Vec::with_capacity(reprs_number);
         let (sender, receiver) = channel();
 
         std::ops::Range {
             start: 0,
-            end: ((selected.len() + 1) / 2),
+            end: reprs_number,
         }
         .into_par_iter()
         .for_each_with(sender, |s, i| {
@@ -580,12 +581,26 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 &self.population[selected[ind1]].ind,
                 &self.population[selected[ind2]].ind,
             );
-            s.send(crossed1).unwrap();
-            s.send(crossed2).unwrap();
+            s.send((selected[ind1], selected[ind2], crossed1, crossed2))
+                .unwrap();
         });
-        for child in receiver {
-            self.population.push(IndWithFitness::new(child, None));
+        for (parent1, parent2, child1, child2) in receiver {
+            self.population.push(IndWithFitness {
+                ind: child1,
+                fitness: None,
+                _phantom: PhantomData,
+            });
+            self.population.push(IndWithFitness {
+                ind: child2,
+                fitness: None,
+                _phantom: PhantomData,
+            });
+            reprs.push(Reproduction {
+                parents: (parent1, parent2),
+                children: (self.population.len() - 2, self.population.len() - 1),
+            });
         }
+        reprs
     }
 
     fn mutate(&mut self, mutation_rate: f64) {
@@ -634,22 +649,11 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         }
     }
 
-    fn survival_pressure_kill(&mut self) {
-        for killed in self
-            .survival_pressure
-            .kill(self.population_size, &self.population)
-        {
-            self.population.remove(killed);
-        }
-    }
-
-    fn sort_population(&mut self) {
-        self.population.par_sort_unstable_by(|el1, el2| {
-            el2.fitness
-                .unwrap()
-                .fitness
-                .partial_cmp(&el1.fitness.unwrap().fitness)
-                .unwrap()
-        });
+    fn survival_pressure_kill(&mut self, parents_children: &[Reproduction]) {
+        self.survival_pressure.kill(
+            self.population_size,
+            &mut self.population,
+            &parents_children,
+        );
     }
 }
