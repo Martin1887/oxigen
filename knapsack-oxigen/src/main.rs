@@ -186,7 +186,7 @@ fn main() {
             },
         ];
     }
-    let (solutions, generation, progress, population) = GeneticExecution::<bool, Knapsack>::new()
+    let (solutions, generation, progress, _population) = GeneticExecution::<bool, Knapsack>::new()
         .population_size(population_size)
         .genotype_size((capacity, items))
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
@@ -205,9 +205,17 @@ fn main() {
             AgeThreshold(2),
             AgeSlope(4_f64),
         )))
+        .population_refitness_function(Box::new(PopulationRefitnessFunctions::Niches(
+            NichesAlpha(1.0),
+            Box::new(NichesBetaRates::Constant(1.0)),
+            NichesSigma(0.2),
+        )))
+        .survival_pressure_function(Box::new(
+            SurvivalPressureFunctions::DeterministicOverpopulation,
+        ))
         .progress_log(100, progress_log)
         .population_log(500, population_log)
-        .stop_criterion(Box::new(StopCriteria::Generation(1000)))
+        .stop_criterion(Box::new(StopCriteria::GenerationAndProgress(1000, 0.0001)))
         .run();
 
     println!(
@@ -216,10 +224,5 @@ fn main() {
     );
     for sol in &solutions {
         println!("{}", sol);
-    }
-    println!("Population: {:?}", population);
-
-    for ind in population {
-        println!("ind: {}", ind);
     }
 }
