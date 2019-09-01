@@ -68,7 +68,8 @@ pub enum SurvivalPressureFunctions {
     /// Kill individuals that have been crossed and after that random individuals until reach
     /// the initial population size.
     ChildrenReplaceParentsAndTheRestRandomly,
-    /// Kill individuals that have been crossed and after that randomly the most similar individuals
+    /// Kill individuals that have been crossed and after that randomly select
+    /// an individual to fight to the the most similar to it
     /// until reach the initial population size. Note that this function is slow using the
     /// default Genotype similarity function because genes are compared one by one.
     ChildrenReplaceParentsAndTheRestRandomMostSimilar,
@@ -94,15 +95,16 @@ pub enum SurvivalPressureFunctions {
     /// random individuals until reach the initial population size.
     ChildrenFightParentsAndTheRestRandomly,
     /// Each child fight with a random parent in a parricide battle for survival and after that
-    /// randomly the most similar individuals until reach the initial population size.
+    /// randomly select an individual to fight to the the most similar to it
+    /// until reach the initial population size.
     /// Note that this function is slow because each individual similarity is computed across the
     /// rest of individuals of the population.
-    ChildrenFightParentsAndTheRestMostSimilar,
+    ChildrenFightParentsAndTheRestRandomMostSimilar,
     /// Each child fight with a random parent in a parricide battle for survival and after that
     /// the most similar individuals until reach the initial population size.
     /// Note that this function is slow because each individual similarity is computed across the
     /// rest of individuals of the population.
-    ChildrenFightParentsAndTheRestRandomMostSimilar,
+    ChildrenFightParentsAndTheRestMostSimilar,
     /// Each child fight with a random parent in a parricide battle for survival and after that
     /// the oldest individuals until reach the initial population size.
     ChildrenFightParentsAndTheRestOldest,
@@ -207,8 +209,8 @@ impl SurvivalPressureFunctions {
         population: &mut Vec<IndWithFitness<T, G>>,
     ) {
         sort_population(population);
-        let mut i = population.len() - 1;
-        while i >= population_size {
+        let mut i = population.len();
+        while i > population_size {
             population.pop();
             i -= 1;
         }
@@ -219,9 +221,9 @@ impl SurvivalPressureFunctions {
         population: &mut Vec<IndWithFitness<T, G>>,
     ) {
         let mut rgen = SmallRng::from_entropy();
-        let mut i = population.len() - 1;
-        while i >= population_size {
-            let chosen = rgen.sample(Uniform::from(0..=i));
+        let mut i = population.len();
+        while i > population_size {
+            let chosen = rgen.sample(Uniform::from(0..i));
             population.remove(chosen);
             i -= 1;
         }
@@ -231,8 +233,8 @@ impl SurvivalPressureFunctions {
         population: &mut Vec<IndWithFitness<T, G>>,
     ) {
         sort_population_by_age(population);
-        let mut i = population.len() - 1;
-        while i >= population_size {
+        let mut i = population.len();
+        while i > population_size {
             population.pop();
             i -= 1;
         }
@@ -248,6 +250,7 @@ impl SurvivalPressureFunctions {
             let most_similar_0 = population
                 .par_iter()
                 .enumerate()
+                // Children start at population_size (added at the end)
                 .filter(|(i, _el)| *i < population_size && !killed.contains(i))
                 .map(|(i, el)| (i, population[repr.children.0].ind.distance(&el.ind)))
                 .min_by(|x, y| x.1.partial_cmp(&y.1).unwrap())
@@ -258,6 +261,7 @@ impl SurvivalPressureFunctions {
             let most_similar_1 = population
                 .par_iter()
                 .enumerate()
+                // Children start at population_size (added at the end)
                 .filter(|(i, _el)| *i < population_size && !killed.contains(i))
                 .map(|(i, el)| (i, population[repr.children.1].ind.distance(&el.ind)))
                 .min_by(|x, y| x.1.partial_cmp(&y.1).unwrap())
@@ -268,7 +272,6 @@ impl SurvivalPressureFunctions {
         // killed must be sorted because the indexes of elements at the right
         // change when removing elements from vector
         killed.par_sort_unstable();
-        killed.dedup();
         for el in killed.iter().rev() {
             population.remove(*el);
         }
@@ -308,6 +311,7 @@ impl SurvivalPressureFunctions {
             let most_similar_0 = population
                 .par_iter()
                 .enumerate()
+                // Children start at population_size (added at the end)
                 .filter(|(i, _el)| *i < population_size && !killed.contains(i))
                 .map(|(i, el)| (i, population[repr.children.0].ind.distance(&el.ind)))
                 .min_by(|x, y| x.1.partial_cmp(&y.1).unwrap())
@@ -324,6 +328,7 @@ impl SurvivalPressureFunctions {
             let most_similar_1 = population
                 .par_iter()
                 .enumerate()
+                // Children start at population_size (added at the end)
                 .filter(|(i, _el)| *i < population_size && !killed.contains(i))
                 .map(|(i, el)| (i, population[repr.children.1].ind.distance(&el.ind)))
                 .min_by(|x, y| x.1.partial_cmp(&y.1).unwrap())
@@ -340,7 +345,6 @@ impl SurvivalPressureFunctions {
         // killed must be sorted because the indexes of elements at the right
         // change when removing elements from vector
         killed.par_sort_unstable();
-        killed.dedup();
         for el in killed.iter().rev() {
             population.remove(*el);
         }
@@ -412,9 +416,13 @@ impl SurvivalPressureFunctions {
             let par1 = &population[repr.parents.1];
             let child0 = &population[repr.children.0];
             let child1 = &population[repr.children.1];
-            let dist0 = par0.ind.distance(&child0.ind) + par1.ind.distance(&child1.ind);
-            let dist1 = par0.ind.distance(&child1.ind) + par1.ind.distance(&child0.ind);
-            if dist0 < dist1 {
+            let dist0_0 = par0.ind.distance(&child0.ind);
+            let dist0_1 = par0.ind.distance(&child1.ind);
+            let dist1_0 = par1.ind.distance(&child0.ind);
+            let dist1_1 = par1.ind.distance(&child1.ind);
+            // The sum of distances comparing parent 0 to child 0 and
+            // parent 1 to child 1 is lower than the another case
+            if dist0_0 + dist1_1 <= dist0_1 + dist1_0 {
                 // First parent fights with first child
                 if par0.fitness.unwrap().fitness > child0.fitness.unwrap().fitness {
                     // The parent survives
@@ -465,7 +473,7 @@ impl SurvivalPressureFunctions {
         population: &mut Vec<IndWithFitness<T, G>>,
         parents_children: &[Reproduction],
     ) {
-        let mut killed = Vec::with_capacity(m);
+        let mut killed = Vec::with_capacity(parents_children.len() * 2);
         let mut choosable: Vec<usize> = Vec::with_capacity(m);
         let mut rgen = SmallRng::from_entropy();
         let mut children: Vec<usize> = Vec::with_capacity(parents_children.len() * 2);
@@ -498,7 +506,6 @@ impl SurvivalPressureFunctions {
         // killed must be sorted because the indexes of elements at the right
         // change when removing elements from vector
         killed.par_sort_unstable();
-        killed.dedup();
         for el in killed.iter().rev() {
             population.remove(*el);
         }
@@ -510,7 +517,7 @@ impl SurvivalPressureFunctions {
         population: &mut Vec<IndWithFitness<T, G>>,
         parents_children: &[Reproduction],
     ) {
-        let mut killed = Vec::with_capacity(m);
+        let mut killed = Vec::with_capacity(parents_children.len() * 2);
         let mut choosable: Vec<usize> = Vec::with_capacity(m);
         let mut rgen = SmallRng::from_entropy();
         let mut children: Vec<usize> = Vec::with_capacity(parents_children.len() * 2);
@@ -549,7 +556,6 @@ impl SurvivalPressureFunctions {
         // killed must be sorted because the indexes of elements at the right
         // change when removing elements from vector
         killed.par_sort_unstable();
-        killed.dedup();
         for el in killed.iter().rev() {
             population.remove(*el);
         }
@@ -594,7 +600,6 @@ impl SurvivalPressureFunctions {
         // killed must be sorted because the indexes of elements at the right
         // change when removing elements from vector
         killed.par_sort_unstable();
-        killed.dedup();
         for el in killed.iter().rev() {
             population.remove(*el);
         }
@@ -627,17 +632,17 @@ impl SurvivalPressureFunctions {
                 .par_iter()
                 .enumerate()
                 .filter(|(i, _el)| !killed.contains(i))
-                .map(|(i, less_similars)| {
+                .map(|(i, distances)| {
                     (
                         i,
-                        less_similars
+                        distances
                             .iter()
-                            .filter(|(j, _el)| i != *j && !killed.contains(j))
+                            .filter(|(j, _dist)| i != *j && !killed.contains(j))
                             .min_by(|x, y| x.1.partial_cmp(&y.1).unwrap())
                             .unwrap(),
                     )
                 })
-                .max_by(|x, y| x.1.partial_cmp(&y.1).unwrap())
+                .min_by(|x, y| (x.1).1.partial_cmp(&(y.1).1).unwrap())
                 .unwrap();
 
             if population[chosen].fitness.unwrap().fitness
@@ -652,7 +657,6 @@ impl SurvivalPressureFunctions {
         // killed must be sorted because the indexes of elements at the right
         // change when removing elements from vector
         killed.par_sort_unstable();
-        killed.dedup();
         for i in killed.iter().rev() {
             population.remove(*i);
         }
