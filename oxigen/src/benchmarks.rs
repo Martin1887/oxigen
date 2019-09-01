@@ -769,6 +769,194 @@ fn bench_survival_pressure_children_fight_parents_255inds(b: &mut Bencher) {
 }
 
 #[bench]
+fn bench_survival_pressure_overpopulation_255inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .survival_pressure_function(Box::new(SurvivalPressureFunctions::Overpopulation(
+                M::new(
+                    population_size - population_size / 4,
+                    population_size / 2,
+                    population_size,
+                ),
+            ))),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
+    let mut parents_children = Vec::with_capacity(selected.len() / 2);
+    let mut i = 0;
+    while parents_children.len() < selected.len() / 2 {
+        parents_children.push(Reproduction {
+            parents: (selected[i * 2], selected[i * 2 + 1]),
+            children: (selected[i * 2] + 1, selected[i * 2 + 1] + 1),
+        });
+        i += 1;
+    }
+    let population_children_size = population_size + 255;
+    // add dummy individuals until reach the initial number of individuals
+    while gen_exec.population.len() < population_children_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard { 0: vec![0; 255] },
+            Some(Fitness {
+                age: 0,
+                fitness: 0.0,
+                original_fitness: 0.0,
+            }),
+        ));
+    }
+    b.iter(move || {
+        gen_exec.survival_pressure_kill(&parents_children);
+        // add dummy individuals until reach the initial number of individuals
+        while gen_exec.population.len() < population_children_size {
+            gen_exec.population.push(IndWithFitness::new(
+                QueensBoard { 0: vec![0; 255] },
+                Some(Fitness {
+                    age: 0,
+                    fitness: 0.0,
+                    original_fitness: 0.0,
+                }),
+            ));
+        }
+    });
+}
+
+#[bench]
+fn bench_survival_pressure_competitive_overpopulation_255inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .survival_pressure_function(Box::new(
+                SurvivalPressureFunctions::CompetitiveOverpopulation(M::new(
+                    population_size - population_size / 4,
+                    population_size / 2,
+                    population_size,
+                )),
+            )),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
+    let mut parents_children = Vec::with_capacity(selected.len() / 2);
+    let mut i = 0;
+    while parents_children.len() < selected.len() / 2 {
+        parents_children.push(Reproduction {
+            parents: (selected[i * 2], selected[i * 2 + 1]),
+            children: (selected[i * 2] + 1, selected[i * 2 + 1] + 1),
+        });
+        i += 1;
+    }
+    let population_children_size = population_size + 255;
+    // add dummy individuals until reach the initial number of individuals
+    while gen_exec.population.len() < population_children_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard { 0: vec![0; 255] },
+            Some(Fitness {
+                age: 0,
+                fitness: 0.0,
+                original_fitness: 0.0,
+            }),
+        ));
+    }
+    b.iter(move || {
+        gen_exec.survival_pressure_kill(&parents_children);
+        // add dummy individuals until reach the initial number of individuals
+        while gen_exec.population.len() < population_children_size {
+            gen_exec.population.push(IndWithFitness::new(
+                QueensBoard { 0: vec![0; 255] },
+                Some(Fitness {
+                    age: 0,
+                    fitness: 0.0,
+                    original_fitness: 0.0,
+                }),
+            ));
+        }
+    });
+}
+
+#[bench]
+fn bench_survival_pressure_deterministic_overpopulation_255inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .survival_pressure_function(Box::new(
+                SurvivalPressureFunctions::DeterministicOverpopulation,
+            )),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
+    let selected = gen_exec.selection.select(&current_fitnesses, 8);
+    let mut parents_children = Vec::with_capacity(selected.len() / 2);
+    let mut i = 0;
+    while parents_children.len() < selected.len() / 2 {
+        parents_children.push(Reproduction {
+            parents: (selected[i * 2], selected[i * 2 + 1]),
+            children: (selected[i * 2] + 1, selected[i * 2 + 1] + 1),
+        });
+        i += 1;
+    }
+    let population_children_size = population_size + 255;
+    // add dummy individuals until reach the initial number of individuals
+    while gen_exec.population.len() < population_children_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard { 0: vec![0; 255] },
+            Some(Fitness {
+                age: 0,
+                fitness: 0.0,
+                original_fitness: 0.0,
+            }),
+        ));
+    }
+    b.iter(move || {
+        gen_exec.survival_pressure_kill(&parents_children);
+        // add dummy individuals until reach the initial number of individuals
+        while gen_exec.population.len() < population_children_size {
+            gen_exec.population.push(IndWithFitness::new(
+                QueensBoard { 0: vec![0; 255] },
+                Some(Fitness {
+                    age: 0,
+                    fitness: 0.0,
+                    original_fitness: 0.0,
+                }),
+            ));
+        }
+    });
+}
+
+#[bench]
 fn bench_survival_pressure_children_replace_parents_and_the_rest_random_most_similar_255inds(
     b: &mut Bencher,
 ) {
