@@ -3,16 +3,17 @@
 use genotype::Genotype;
 use rand::distributions::Uniform;
 use rand::prelude::*;
-use std::cmp::min;
+use std::cmp::{min, PartialEq};
 use CrossoverFunctions::*;
 
 /// This trait defines the cross function.
-pub trait Crossover<T, G: Genotype<T>>: Send + Sync {
+pub trait Crossover<T: PartialEq, G: Genotype<T>>: Send + Sync {
     /// Generates two children combining the two selected individuals.
     fn cross(&self, ind1: &G, ind2: &G) -> (G, G);
 }
 
 /// Provided crossover functions.
+#[derive(Debug)]
 pub enum CrossoverFunctions {
     /// Single point Crossover.
     SingleCrossPoint,
@@ -22,39 +23,31 @@ pub enum CrossoverFunctions {
     UniformCross,
 }
 
-impl<T, G: Genotype<T>> Crossover<T, G> for CrossoverFunctions {
+impl<T: PartialEq, G: Genotype<T>> Crossover<T, G> for CrossoverFunctions {
     fn cross(&self, ind1: &G, ind2: &G) -> (G, G) {
         match self {
             SingleCrossPoint => {
                 let ind_size = min(ind1.iter().len(), ind2.iter().len());
                 let cross_point = SmallRng::from_entropy().sample(Uniform::from(1..ind_size));
 
-                (
+                let mut child1 = ind1.clone();
+                child1.from_iter(
                     ind1.clone()
                         .into_iter()
+                        .zip(ind2.clone().into_iter())
                         .enumerate()
-                        .filter(|(i, _gen)| *i < cross_point)
-                        .chain(
-                            ind2.clone()
-                                .into_iter()
-                                .enumerate()
-                                .filter(|(i, _gen)| *i >= cross_point),
-                        )
-                        .map(|(_i, gen)| gen)
-                        .collect(),
-                    ind2.clone()
+                        .map(|(i, (gen1, gen2))| if i < cross_point { gen1 } else { gen2 }),
+                );
+                let mut child2 = ind2.clone();
+                child2.from_iter(
+                    ind1.clone()
                         .into_iter()
+                        .zip(ind2.clone().into_iter())
                         .enumerate()
-                        .filter(|(i, _gen)| *i < cross_point)
-                        .chain(
-                            ind1.clone()
-                                .into_iter()
-                                .enumerate()
-                                .filter(|(i, _gen)| *i >= cross_point),
-                        )
-                        .map(|(_i, gen)| gen)
-                        .collect(),
-                )
+                        .map(|(i, (gen1, gen2))| if i < cross_point { gen2 } else { gen1 }),
+                );
+
+                (child1, child2)
             }
             MultiCrossPoint => {
                 let ind_size = min(ind1.iter().len(), ind2.iter().len());
@@ -70,7 +63,8 @@ impl<T, G: Genotype<T>> Crossover<T, G> for CrossoverFunctions {
                 }
                 cross_points.push(ind_size);
 
-                (
+                let mut child1 = ind1.clone();
+                child1.from_iter(
                     ind1.clone()
                         .into_iter()
                         .zip(ind2.clone().into_iter())
@@ -89,8 +83,10 @@ impl<T, G: Genotype<T>> Crossover<T, G> for CrossoverFunctions {
                                 }
                             }
                             gen1
-                        })
-                        .collect(),
+                        }),
+                );
+                let mut child2 = ind2.clone();
+                child2.from_iter(
                     ind1.clone()
                         .into_iter()
                         .zip(ind2.clone().into_iter())
@@ -109,24 +105,31 @@ impl<T, G: Genotype<T>> Crossover<T, G> for CrossoverFunctions {
                                 }
                             }
                             gen2
-                        })
-                        .collect(),
-                )
+                        }),
+                );
+
+                (child1, child2)
             }
-            UniformCross => (
-                ind1.clone()
-                    .into_iter()
-                    .zip(ind2.clone().into_iter())
-                    .enumerate()
-                    .map(|(i, (gen1, gen2))| if i % 2 == 0 { gen1 } else { gen2 })
-                    .collect(),
-                ind1.clone()
-                    .into_iter()
-                    .zip(ind2.clone().into_iter())
-                    .enumerate()
-                    .map(|(i, (gen1, gen2))| if i % 2 != 0 { gen1 } else { gen2 })
-                    .collect(),
-            ),
+            UniformCross => {
+                let mut child1 = ind1.clone();
+                child1.from_iter(
+                    ind1.clone()
+                        .into_iter()
+                        .zip(ind2.clone().into_iter())
+                        .enumerate()
+                        .map(|(i, (gen1, gen2))| if i % 2 == 0 { gen1 } else { gen2 }),
+                );
+                let mut child2 = ind2.clone();
+                child2.from_iter(
+                    ind1.clone()
+                        .into_iter()
+                        .zip(ind2.clone().into_iter())
+                        .enumerate()
+                        .map(|(i, (gen1, gen2))| if i % 2 != 0 { gen1 } else { gen2 }),
+                );
+
+                (child1, child2)
+            }
         }
     }
 }

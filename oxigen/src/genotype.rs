@@ -2,14 +2,13 @@
 
 use rand::prelude::SmallRng;
 use std::fmt::Display;
-use std::iter::FromIterator;
 use std::slice::Iter;
 use std::vec::IntoIter;
 
 /// This trait defines an individual of a population in the genetic algorithm.
 /// It defines the fitness and mutation functions and the type of the
 /// individual representation.
-pub trait Genotype<T>: FromIterator<T> + Display + Clone + Send + Sync {
+pub trait Genotype<T: PartialEq>: Display + Clone + Send + Sync {
     /// The type that represents the problem size of the genotype. For example,
     /// in the N Queens problem the size of the `ProblemSize` is a numeric type
     /// (the number of queens).
@@ -20,6 +19,9 @@ pub trait Genotype<T>: FromIterator<T> + Display + Clone + Send + Sync {
 
     /// Consumes the individual into an iterator over its genes.
     fn into_iter(self) -> IntoIter<T>;
+
+    /// Set the genes of the individual from an iterator.
+    fn from_iter<I: Iterator<Item = T>>(&mut self, I);
 
     /// Randomly initiailzes an individual.
     fn generate(size: &Self::ProblemSize) -> Self;
@@ -36,5 +38,25 @@ pub trait Genotype<T>: FromIterator<T> + Display + Clone + Send + Sync {
 
     /// Fix the individual to satisfy the problem restrictions. The default
     /// implementation is to remain the individual unmodified always.
-    fn fix(&mut self) {}
+    ///
+    /// # Returns
+    ///
+    /// true if the individual has changed and false otherwise. If this function
+    /// returns true the fitness is recomputed.
+    fn fix(&mut self) -> bool {
+        false
+    }
+
+    /// A function to define how different is the individual from another one.
+    /// The default implementation sums the number of different genes and divides
+    /// it by the total number of genes. This
+    /// function is used to determine if solutions are different and in some
+    /// survival pressure functions.
+    fn distance(&self, other: &Self) -> f64 {
+        self.iter()
+            .zip(other.iter())
+            .filter(|(gen, gen_other)| gen != gen_other)
+            .count() as f64
+            / self.iter().len() as f64
+    }
 }

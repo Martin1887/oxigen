@@ -7,24 +7,12 @@ use rand::distributions::Standard;
 use rand::prelude::*;
 
 use std::fmt::Display;
-use std::iter::FromIterator;
 #[derive(Clone)]
 struct OneMax(Vec<bool>);
 
 impl Display for OneMax {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(f, "{:?}", self.0)
-    }
-}
-
-impl FromIterator<bool> for OneMax {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = bool>,
-    {
-        OneMax {
-            0: iter.into_iter().collect(),
-        }
     }
 }
 
@@ -36,6 +24,9 @@ impl Genotype<bool> for OneMax {
     }
     fn into_iter(self) -> std::vec::IntoIter<bool> {
         self.0.into_iter()
+    }
+    fn from_iter<I: Iterator<Item = bool>>(&mut self, genes: I) {
+        self.0 = genes.collect();
     }
 
     fn generate(size: &Self::ProblemSize) -> Self {
@@ -75,11 +66,13 @@ fn main() {
             start: f64::from(problem_size as u32) / (8_f64 + 2_f64 * log2) / 100_f64,
             bound: 0.005,
             coefficient: -0.0002,
-        }))).selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
+        })))
+        .selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
             start: log2 - 2_f64,
             bound: log2 / 1.5,
             coefficient: -0.0005,
-        }))).select_function(Box::new(SelectionFunctions::Cup))
+        })))
+        .select_function(Box::new(SelectionFunctions::Cup))
         .run();
 
     println!("Finished in the generation {}", generation);

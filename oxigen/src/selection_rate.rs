@@ -11,7 +11,7 @@ pub trait SelectionRate: Send + Sync {
         &self,
         generation: u64,
         progress: f64,
-        n_solutions: u16,
+        n_solutions: usize,
         population_fitness: &[f64],
     ) -> usize;
 }
@@ -22,8 +22,8 @@ pub enum SelectionRates {
     Constant(usize),
     /// Linear function of iterations.
     Linear(SlopeParams),
-    /// Cuadratic function of iterations.
-    Cuadratic(SlopeParams),
+    /// Quadratic function of iterations.
+    Quadratic(SlopeParams),
 }
 
 impl SelectionRate for SelectionRates {
@@ -31,7 +31,7 @@ impl SelectionRate for SelectionRates {
         &self,
         generation: u64,
         _progress: f64,
-        _n_solutions: u16,
+        _n_solutions: usize,
         _population_fitness: &[f64],
     ) -> usize {
         match self {
@@ -39,7 +39,7 @@ impl SelectionRate for SelectionRates {
             Linear(sp) => sp
                 .check_bound(sp.coefficient * generation as f64 + sp.start)
                 .ceil() as usize,
-            Cuadratic(sp) => sp
+            Quadratic(sp) => sp
                 .check_bound(sp.coefficient * generation as f64 * generation as f64 + sp.start)
                 .ceil() as usize,
         }

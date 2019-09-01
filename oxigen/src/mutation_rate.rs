@@ -11,7 +11,7 @@ pub trait MutationRate: Send + Sync {
         &self,
         generation: u64,
         progress: f64,
-        n_solutions: u16,
+        n_solutions: usize,
         population_fitness: &[f64],
     ) -> f64;
 }
@@ -22,8 +22,8 @@ pub enum MutationRates {
     Constant(f64),
     /// Linear function of generations.
     Linear(SlopeParams),
-    /// Cuadratic function of generations.
-    Cuadratic(SlopeParams),
+    /// Quadratic function of generations.
+    Quadratic(SlopeParams),
 }
 
 impl MutationRate for MutationRates {
@@ -31,13 +31,13 @@ impl MutationRate for MutationRates {
         &self,
         generation: u64,
         _progress: f64,
-        _n_solutions: u16,
+        _n_solutions: usize,
         _population_fitness: &[f64],
     ) -> f64 {
         match self {
             Constant(c) => *c,
             Linear(sp) => sp.check_bound(sp.coefficient * generation as f64 + sp.start),
-            Cuadratic(sp) => {
+            Quadratic(sp) => {
                 sp.check_bound(sp.coefficient * generation as f64 * generation as f64 + sp.start)
             }
         }

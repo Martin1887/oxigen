@@ -11,6 +11,8 @@ pub mod age;
 pub mod crossover;
 pub mod genotype;
 pub mod mutation_rate;
+pub mod niches_beta_rate;
+pub mod population_refitness;
 pub mod prelude;
 pub mod selection;
 pub mod selection_rate;
@@ -22,9 +24,13 @@ pub use age::*;
 pub use crossover::*;
 pub use genotype::Genotype;
 pub use mutation_rate::*;
+pub use niches_beta_rate::*;
+pub use population_refitness::*;
 pub use selection::*;
 pub use selection_rate::*;
 pub use slope_params::*;
+use std::fmt::Display;
+use std::marker::PhantomData;
 pub use stop_criteria::*;
 pub use survival_pressure::*;
 
@@ -61,38 +67,8 @@ const PROGRESS_HEADER: &[u8] = b"Generation\t\
     Fitness p75\t\
     Fitness p90\n";
 
-/// Struct that defines a genetic algorithm execution.
-pub struct GeneticExecution<T, Ind: Genotype<T>> {
-    /// The number of individuals in the population.
-    population_size: usize,
-    /// Population with all individuals and their respective fitnesses.
-    population: Vec<(Box<Ind>, Option<Fitness>)>,
-    /// Size of the genotype problem.
-    genotype_size: Ind::ProblemSize,
-    /// The mutation rate variation along iterations and progress.
-    mutation_rate: Box<MutationRate>,
-    /// The number of stages in the cup whose individuals are selected to crossover.
-    selection_rate: Box<SelectionRate>,
-    /// The selection function.
-    selection: Box<Selection>,
-    /// The age fitness decrease function.
-    age: Box<Age>,
-    /// The crossover function.
-    crossover: Box<Crossover<T, Ind>>,
-    /// The function used to replace individuals in the population.
-    survival_pressure: Box<SurvivalPressure<T, Ind>>,
-    /// The stop criterion to finish execution.
-    stop_criterion: Box<StopCriterion>,
-    /// Cache fitness value of individuals or compute it in each iteration.
-    cache_fitness: bool,
-    /// Progress log, writes statistics of the population every certain number of generations.
-    progress_log: (u64, Option<File>),
-    /// Population log, writes the population and fitnesses every certain number of generations.
-    population_log: (u64, Option<File>),
-}
-
 /// Struct that defines the fitness of each individual and the related information.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Fitness {
     /// Age of the individual.
     age: u64,
@@ -102,7 +78,66 @@ pub struct Fitness {
     original_fitness: f64,
 }
 
-impl<T, Ind: Genotype<T>> Default for GeneticExecution<T, Ind> {
+/// Struct that defines a pair of individual-fitness
+#[derive(Debug)]
+pub struct IndWithFitness<T: PartialEq + Send + Sync, Ind: Genotype<T>> {
+    /// Individual
+    ind: Ind,
+    /// Fitness (can be not computed yet)
+    fitness: Option<Fitness>,
+    _phantom: PhantomData<T>,
+}
+
+impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> IndWithFitness<T, Ind> {
+    pub fn new(ind: Ind, fitness: Option<Fitness>) -> IndWithFitness<T, Ind> {
+        IndWithFitness {
+            ind,
+            fitness,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> Display for IndWithFitness<T, Ind> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "ind: {}, fitness: {:?}", self.ind, self.fitness)
+    }
+}
+
+/// Struct that defines a genetic algorithm execution.
+pub struct GeneticExecution<T: PartialEq + Send + Sync, Ind: Genotype<T>> {
+    /// The number of individuals in the population.
+    population_size: usize,
+    /// Population with all individuals and their respective fitnesses.
+    population: Vec<IndWithFitness<T, Ind>>,
+    /// Size of the genotype problem.
+    genotype_size: Ind::ProblemSize,
+    /// The mutation rate variation along iterations and progress.
+    mutation_rate: Box<dyn MutationRate>,
+    /// The number of stages in the cup whose individuals are selected to crossover.
+    selection_rate: Box<dyn SelectionRate>,
+    /// The selection function.
+    selection: Box<dyn Selection>,
+    /// The age fitness decrease function.
+    age: Box<dyn Age>,
+    /// The crossover function.
+    crossover: Box<dyn Crossover<T, Ind>>,
+    /// The funciton used to reompute the fitness using the full population just
+    /// before survival pressure.
+    population_refitness: Box<dyn PopulationRefitness<T, Ind>>,
+    /// The function used to replace individuals in the population.
+    survival_pressure: Box<dyn SurvivalPressure<T, Ind>>,
+    /// The stop criterion to finish execution.
+    stop_criterion: Box<dyn StopCriterion>,
+    /// Cache fitness value of individuals or compute it in each iteration.
+    cache_fitness: bool,
+    /// Progress log, writes statistics of the population every certain number of generations.
+    progress_log: (u64, Option<File>),
+    /// Population log, writes the population and fitnesses every certain number of generations.
+    population_log: (u64, Option<File>),
+}
+
+impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> Default for GeneticExecution<T, Ind> {
     fn default() -> Self {
         GeneticExecution {
             population_size: 64,
@@ -113,6 +148,7 @@ impl<T, Ind: Genotype<T>> Default for GeneticExecution<T, Ind> {
             selection: Box::new(SelectionFunctions::Cup),
             age: Box::new(AgeFunctions::None),
             crossover: Box::new(CrossoverFunctions::SingleCrossPoint),
+            population_refitness: Box::new(PopulationRefitnessFunctions::None),
             survival_pressure: Box::new(SurvivalPressureFunctions::Worst),
             stop_criterion: Box::new(StopCriteria::SolutionFound),
             cache_fitness: true,
@@ -122,7 +158,7 @@ impl<T, Ind: Genotype<T>> Default for GeneticExecution<T, Ind> {
     }
 }
 
-impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
+impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     /// Creates a new default genetic algorithm execution.
     pub fn new() -> Self {
         Self::default()
@@ -137,7 +173,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     /// Sets the initial population individuals. If lower individuals
     /// than population_size are received, the rest of population will be
     /// generated randomly.
-    pub fn population(mut self, new_pop: Vec<(Box<Ind>, Option<Fitness>)>) -> Self {
+    pub fn population(mut self, new_pop: Vec<IndWithFitness<T, Ind>>) -> Self {
         self.population = new_pop;
         self
     }
@@ -149,43 +185,55 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     }
 
     /// Sets the mutation rate.
-    pub fn mutation_rate(mut self, new_mut: Box<MutationRate>) -> Self {
+    pub fn mutation_rate(mut self, new_mut: Box<dyn MutationRate>) -> Self {
         self.mutation_rate = new_mut;
         self
     }
 
     /// Sets the number of tournament stages whose individuals are selected for crossover.
-    pub fn selection_rate(mut self, new_sel_rate: Box<SelectionRate>) -> Self {
+    pub fn selection_rate(mut self, new_sel_rate: Box<dyn SelectionRate>) -> Self {
         self.selection_rate = new_sel_rate;
         self
     }
 
     /// Sets the selection function of the genetic algorithm.
-    pub fn select_function(mut self, new_sel: Box<Selection>) -> Self {
+    pub fn select_function(mut self, new_sel: Box<dyn Selection>) -> Self {
         self.selection = new_sel;
         self
     }
 
     /// Sets the age function of the genetic algorithm.
-    pub fn age_function(mut self, new_age: Box<Age>) -> Self {
+    pub fn age_function(mut self, new_age: Box<dyn Age>) -> Self {
         self.age = new_age;
         self
     }
 
     /// Sets the crossover function of the genetic algorithm.
-    pub fn crossover_function(mut self, new_cross: Box<Crossover<T, Ind>>) -> Self {
+    pub fn crossover_function(mut self, new_cross: Box<dyn Crossover<T, Ind>>) -> Self {
         self.crossover = new_cross;
         self
     }
 
+    /// Sets the population refitness function of the genetic algorithm.
+    pub fn population_refitness_function(
+        mut self,
+        new_refit: Box<dyn PopulationRefitness<T, Ind>>,
+    ) -> Self {
+        self.population_refitness = new_refit;
+        self
+    }
+
     /// Sets the survival pressure function of the genetic algorithm.
-    pub fn survival_pressure_function(mut self, new_surv: Box<SurvivalPressure<T, Ind>>) -> Self {
+    pub fn survival_pressure_function(
+        mut self,
+        new_surv: Box<dyn SurvivalPressure<T, Ind>>,
+    ) -> Self {
         self.survival_pressure = new_surv;
         self
     }
 
     /// Sets the stop criterion of the genetic algorithm.
-    pub fn stop_criterion(mut self, new_crit: Box<StopCriterion>) -> Self {
+    pub fn stop_criterion(mut self, new_crit: Box<dyn StopCriterion>) -> Self {
         self.stop_criterion = new_crit;
         self
     }
@@ -216,7 +264,7 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     /// - The number of generations run.
     /// - The average progress in the last generations.
     /// - The entire population in the last generation (useful for resuming the execution).
-    pub fn run(mut self) -> (Vec<Box<Ind>>, u64, f64, Vec<(Box<Ind>, Option<Fitness>)>) {
+    pub fn run(mut self) -> (Vec<Ind>, u64, f64, Vec<IndWithFitness<T, Ind>>) {
         let mut generation: u64 = 0;
         let mut last_progresses: Vec<f64> = Vec::new();
         let mut progress: f64 = std::f64::NAN;
@@ -227,45 +275,43 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
 
         // Initialize randomly the population
         while self.population.len() < self.population_size {
-            self.population
-                .push((Box::new(Ind::generate(&self.genotype_size)), None));
+            self.population.push(IndWithFitness::new(
+                Ind::generate(&self.genotype_size),
+                None,
+            ));
         }
         self.fix();
-        let mut current_fitnesses = self.compute_fitnesses(true);
+        self.compute_fitnesses(true);
+        let mut current_fitnesses = self.get_fitnesses();
 
         if self.progress_log.0 > 0 {
             self.print_progress_header();
         }
 
-        while !self.stop_criterion.stop(
-            generation,
-            progress,
-            solutions.len() as u16,
-            &current_fitnesses,
-        ) {
+        while !self
+            .stop_criterion
+            .stop(generation, progress, solutions.len(), &current_fitnesses)
+        {
             generation += 1;
 
-            mutation_rate = self.mutation_rate.rate(
-                generation,
-                progress,
-                solutions.len() as u16,
-                &current_fitnesses,
-            );
-            selection_rate = self.selection_rate.rate(
-                generation,
-                progress,
-                solutions.len() as u16,
-                &current_fitnesses,
-            );
+            mutation_rate =
+                self.mutation_rate
+                    .rate(generation, progress, solutions.len(), &current_fitnesses);
+            selection_rate =
+                self.selection_rate
+                    .rate(generation, progress, solutions.len(), &current_fitnesses);
 
-            current_fitnesses = self.compute_fitnesses(true);
+            self.compute_fitnesses(true);
+            self.refitness(generation, progress, solutions.len());
+            current_fitnesses = self.get_fitnesses();
             let selected = self.selection.select(&current_fitnesses, selection_rate);
-            self.cross(&selected);
+            let parents_children = self.cross(&selected);
             self.mutate(mutation_rate);
             self.fix();
             self.compute_fitnesses(false);
-            self.sort_population();
-            self.survival_pressure_kill();
+            self.refitness(generation, progress, solutions.len());
+            self.age_unfitness();
+            self.survival_pressure_kill(&parents_children);
 
             current_fitnesses = self.get_fitnesses();
             solutions = self.get_solutions();
@@ -283,9 +329,9 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             self.update_age();
         }
 
-        let mut final_solutions: Vec<Box<Ind>> = Vec::new();
+        let mut final_solutions: Vec<Ind> = Vec::new();
         for i in solutions {
-            final_solutions.push(self.population[i].0.clone());
+            final_solutions.push(self.population[i].ind.clone());
         }
         (final_solutions, generation, progress, self.population)
     }
@@ -299,14 +345,14 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                     format!(
                         "Individual: {}; fitness: {}, age: {}, original_fitness: {}\n",
                         i,
-                        ind.1.unwrap().fitness,
-                        ind.1.unwrap().age,
-                        ind.1.unwrap().original_fitness
+                        ind.fitness.unwrap().fitness,
+                        ind.fitness.unwrap().age,
+                        ind.fitness.unwrap().original_fitness
                     )
                     .as_bytes(),
                 )
                 .expect(POPULATION_ERR_MSG);
-                f.write_all(format!("{}\n\n", ind.0).as_bytes())
+                f.write_all(format!("{}\n\n", ind.ind).as_bytes())
                     .expect(POPULATION_ERR_MSG);
             }
             f.write_all(POPULATION_SEPARATOR).expect(POPULATION_ERR_MSG);
@@ -397,16 +443,18 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     }
 
     fn fix(&mut self) {
-        self.population.par_iter_mut().for_each(|ind| {
-            ind.0.fix();
+        self.population.par_iter_mut().for_each(|indwf| {
+            if indwf.ind.fix() {
+                indwf.fitness = None
+            }
         });
     }
 
     fn update_age(&mut self) {
-        self.population.par_iter_mut().for_each(|ind| {
-            if let Some(mut fit) = ind.1 {
+        self.population.par_iter_mut().for_each(|indwf| {
+            if let Some(mut fit) = indwf.fitness {
                 fit.age += 1;
-                ind.1 = Some(fit);
+                indwf.fitness = Some(fit);
             }
         });
     }
@@ -414,57 +462,36 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     fn get_fitnesses(&self) -> Vec<f64> {
         self.population
             .par_iter()
-            .map(|f| f.1.unwrap().fitness)
+            .map(|indwf| indwf.fitness.unwrap().fitness)
             .collect::<Vec<f64>>()
     }
 
-    fn compute_fitnesses(&mut self, refresh_on_nocache: bool) -> Vec<f64> {
-        let age_function = &self.age;
+    fn compute_fitnesses(&mut self, refresh_on_nocache: bool) {
         if self.cache_fitness || !refresh_on_nocache {
             self.population
                 .par_iter_mut()
-                .filter(|ind| ind.1.is_none())
-                .for_each(|ind| {
-                    let new_fit_value = ind.0.fitness();
-                    ind.1 = Some(Fitness {
+                .filter(|indwf| indwf.fitness.is_none())
+                .for_each(|indwf| {
+                    let new_fit_value = indwf.ind.fitness();
+                    indwf.fitness = Some(Fitness {
                         age: 0,
                         fitness: new_fit_value,
                         original_fitness: new_fit_value,
                     });
                 });
-            self.population
-                .par_iter_mut()
-                .filter(|ind| ind.1.is_some())
-                .for_each(|ind| {
-                    let fit = ind.1.unwrap();
-                    let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
-                    if age_exceed >= 0 {
-                        ind.1 = Some(Fitness {
-                            fitness: age_function
-                                .age_unfitness(age_exceed as u64, fit.original_fitness),
-                            age: fit.age,
-                            original_fitness: fit.original_fitness,
-                        });
-                    }
-                });
         } else {
-            self.population.par_iter_mut().for_each(|ind| {
-                let mut new_fit_value = ind.0.fitness();
-                match ind.1 {
+            self.population.par_iter_mut().for_each(|indwf| {
+                let new_fit_value = indwf.ind.fitness();
+                match indwf.fitness {
                     Some(fit) => {
-                        let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
-                        if age_exceed >= 0 {
-                            new_fit_value =
-                                age_function.age_unfitness(age_exceed as u64, new_fit_value);
-                        }
-                        ind.1 = Some(Fitness {
+                        indwf.fitness = Some(Fitness {
                             fitness: new_fit_value,
                             age: fit.age,
                             original_fitness: fit.original_fitness,
                         });
                     }
                     None => {
-                        ind.1 = Some(Fitness {
+                        indwf.fitness = Some(Fitness {
                             age: 0,
                             fitness: new_fit_value,
                             original_fitness: new_fit_value,
@@ -473,35 +500,73 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 }
             });
         }
+    }
 
-        self.get_fitnesses()
+    fn age_unfitness(&mut self) {
+        let age_function = &self.age;
+        self.population.par_iter_mut().for_each(|indwf| {
+            if let Some(fit) = indwf.fitness {
+                let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
+                if age_exceed >= 0 {
+                    indwf.fitness = Some(Fitness {
+                        fitness: age_function.age_unfitness(age_exceed as u64, fit.fitness),
+                        age: fit.age,
+                        original_fitness: fit.original_fitness,
+                    });
+                }
+            }
+        });
     }
 
     fn get_solutions(&self) -> Vec<usize> {
         let mut solutions = Vec::new();
+        let mut solutions_individuals = Vec::new();
         let (sender, receiver) = channel();
 
         self.population
             .par_iter()
             .enumerate()
-            .for_each_with(sender, |s, (i, ind)| {
-                if ind.0.is_solution(ind.1.unwrap().original_fitness) {
-                    s.send(i).unwrap();
+            .for_each_with(sender, |s, (i, indwf)| {
+                if indwf
+                    .ind
+                    .is_solution(indwf.fitness.unwrap().original_fitness)
+                {
+                    s.send((i, indwf.ind.clone())).unwrap();
                 }
             });
-        for sol in receiver {
-            solutions.push(sol);
+        for (index, sol) in receiver {
+            if Self::not_found_yet_solution(&solutions_individuals, &sol) {
+                solutions_individuals.push(sol);
+                solutions.push(index);
+            }
         }
 
         solutions
     }
 
-    fn cross(&mut self, selected: &[usize]) {
+    #[allow(clippy::never_loop)]
+    fn not_found_yet_solution(solutions: &[Ind], other: &Ind) -> bool {
+        let (sender, receiver) = channel();
+        solutions.par_iter().for_each_with(sender, |s, ind| {
+            if other.distance(ind) == 0.0 {
+                s.send(true).unwrap();
+            }
+        });
+        for _found in receiver {
+            return false;
+        }
+
+        true
+    }
+
+    fn cross(&mut self, selected: &[usize]) -> Vec<Reproduction> {
+        let reprs_number = (selected.len() + 1) / 2;
+        let mut reprs = Vec::with_capacity(reprs_number);
         let (sender, receiver) = channel();
 
         std::ops::Range {
             start: 0,
-            end: ((selected.len() + 1) / 2),
+            end: reprs_number,
         }
         .into_par_iter()
         .for_each_with(sender, |s, i| {
@@ -513,46 +578,82 @@ impl<T, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                 ind2 = SmallRng::from_entropy().sample(Uniform::from(0..selected.len()));
             }
             let (crossed1, crossed2) = self.crossover.cross(
-                &self.population[selected[ind1]].0,
-                &self.population[selected[ind2]].0,
+                &self.population[selected[ind1]].ind,
+                &self.population[selected[ind2]].ind,
             );
-            s.send(crossed1).unwrap();
-            s.send(crossed2).unwrap();
+            s.send((selected[ind1], selected[ind2], crossed1, crossed2))
+                .unwrap();
         });
-        for child in receiver {
-            self.population.push((Box::new(child), None));
+        for (parent1, parent2, child1, child2) in receiver {
+            self.population.push(IndWithFitness {
+                ind: child1,
+                fitness: None,
+                _phantom: PhantomData,
+            });
+            self.population.push(IndWithFitness {
+                ind: child2,
+                fitness: None,
+                _phantom: PhantomData,
+            });
+            reprs.push(Reproduction {
+                parents: (parent1, parent2),
+                children: (self.population.len() - 2, self.population.len() - 1),
+            });
         }
+        reprs
     }
 
     fn mutate(&mut self, mutation_rate: f64) {
-        self.population.par_iter_mut().for_each(|individual| {
+        self.population.par_iter_mut().for_each(|indwf| {
             let mut rgen = SmallRng::from_entropy();
-            for gen in 0..individual.0.iter().len() {
+            for gen in 0..indwf.ind.iter().len() {
                 let random: f64 = rgen.sample(Standard);
                 if random < mutation_rate {
-                    individual.0.mutate(&mut rgen, gen);
-                    individual.1 = None;
+                    indwf.ind.mutate(&mut rgen, gen);
+                    indwf.fitness = None;
                 }
             }
         });
     }
 
-    fn survival_pressure_kill(&mut self) {
-        for killed in self
-            .survival_pressure
-            .kill(self.population_size, &self.population)
-        {
-            self.population.remove(killed);
+    fn refitness(&mut self, generation: u64, progress: f64, n_solutions: usize) {
+        let (sender, receiver) = channel();
+
+        self.population
+            .par_iter()
+            .enumerate()
+            .for_each_with(sender, |s, (i, indwf)| {
+                if let Some(fit) = indwf.fitness {
+                    let new_fit = self.population_refitness.population_refitness(
+                        i,
+                        &self.population,
+                        generation,
+                        progress,
+                        n_solutions,
+                    );
+                    if (new_fit - fit.fitness).abs() > 0.000_001 {
+                        s.send((
+                            i,
+                            Some(Fitness {
+                                fitness: new_fit,
+                                age: fit.age,
+                                original_fitness: fit.original_fitness,
+                            }),
+                        ))
+                        .unwrap()
+                    }
+                }
+            });
+        for (i, fit) in receiver {
+            self.population[i].fitness = fit;
         }
     }
 
-    fn sort_population(&mut self) {
-        self.population.par_sort_unstable_by(|el1, el2| {
-            el2.1
-                .unwrap()
-                .fitness
-                .partial_cmp(&el1.1.unwrap().fitness)
-                .unwrap()
-        });
+    fn survival_pressure_kill(&mut self, parents_children: &[Reproduction]) {
+        self.survival_pressure.kill(
+            self.population_size,
+            &mut self.population,
+            &parents_children,
+        );
     }
 }

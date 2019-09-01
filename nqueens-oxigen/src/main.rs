@@ -6,7 +6,6 @@ use rand::distributions::Uniform;
 use rand::prelude::*;
 use std::fmt::Display;
 use std::fs::File;
-use std::iter::FromIterator;
 
 #[derive(Clone)]
 struct QueensBoard(Vec<u8>);
@@ -29,17 +28,6 @@ impl Display for QueensBoard {
     }
 }
 
-impl FromIterator<u8> for QueensBoard {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = u8>,
-    {
-        QueensBoard {
-            0: iter.into_iter().collect(),
-        }
-    }
-}
-
 impl Genotype<u8> for QueensBoard {
     type ProblemSize = u8;
 
@@ -48,6 +36,9 @@ impl Genotype<u8> for QueensBoard {
     }
     fn into_iter(self) -> std::vec::IntoIter<u8> {
         self.0.into_iter()
+    }
+    fn from_iter<I: Iterator<Item = u8>>(&mut self, genes: I) {
+        self.0 = genes.collect();
     }
 
     fn generate(size: &Self::ProblemSize) -> Self {
@@ -132,23 +123,37 @@ fn main() {
         File::create("population.txt").expect("Error creating population log file");
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
+
     let (solutions, generation, progress, _population) = GeneticExecution::<u8, QueensBoard>::new()
         .population_size(population_size)
         .genotype_size(n_queens as u8)
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
-            start: f64::from(n_queens) / (8_f64 + 2_f64 * log2) / 100_f64,
-            bound: 0.005,
-            coefficient: -0.0002,
-        }))).selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
-            start: log2 - 2_f64,
-            bound: log2 / 1.5,
-            coefficient: -0.0005,
-        }))).select_function(Box::new(SelectionFunctions::Cup))
-        .age_function(Box::new(AgeFunctions::Cuadratic(
-            AgeThreshold(50),
-            AgeSlope(1_f64),
-        ))).progress_log(20, progress_log)
-        .population_log(2000, population_log)
+            start: f64::from(n_queens) / (2_f64 + 4_f64 * log2) / 100_f64,
+            bound: 0.0005,
+            coefficient: -0.00002,
+        })))
+        .selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
+            start: 2_f64,
+            bound: 5_f64,
+            coefficient: 0.05,
+        })))
+        .select_function(Box::new(SelectionFunctions::Tournaments(NTournaments(
+            population_size / 2,
+        ))))
+        .crossover_function(Box::new(CrossoverFunctions::UniformCross))
+        .population_refitness_function(Box::new(PopulationRefitnessFunctions::Niches(
+            NichesAlpha(1.0),
+            Box::new(NichesBetaRates::Constant(1.0)),
+            NichesSigma(0.2),
+        )))
+        .survival_pressure_function(Box::new(
+            SurvivalPressureFunctions::DeterministicOverpopulation,
+        ))
+        .stop_criterion(Box::new(StopCriteria::SolutionsFound(
+            4.min(n_queens as usize / 2),
+        )))
+        .progress_log(200_000, progress_log)
+        .population_log(200_000, population_log)
         .run();
 
     println!(
