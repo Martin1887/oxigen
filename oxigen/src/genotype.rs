@@ -49,14 +49,31 @@ pub trait Genotype<T: PartialEq>: Display + Clone + Send + Sync {
 
     /// A function to define how different is the individual from another one.
     /// The default implementation sums the number of different genes and divides
-    /// it by the total number of genes. This
+    /// it by the total number of genes. If one individual is shorter than another,
+    /// to this value the difference in length is added, and the sum is divided by
+    /// the length of the longer individual. This
     /// function is used to determine if solutions are different and in some
     /// survival pressure functions.
     fn distance(&self, other: &Self) -> f64 {
-        self.iter()
-            .zip(other.iter())
-            .filter(|(gen, gen_other)| gen != gen_other)
-            .count() as f64
-            / self.iter().len() as f64
+        if self.iter().len() == other.iter().len() {
+            self.iter()
+                .zip(other.iter())
+                .filter(|(gen, gen_other)| gen != gen_other)
+                .count() as f64
+                / self.iter().len() as f64
+        } else {
+            let max_length = if other.iter().len() > self.iter().len() {
+                other.iter().len()
+            } else {
+                self.iter().len()
+            };
+            (((other.iter().len() - self.iter().len()) as f64).abs()
+                + self
+                    .iter()
+                    .zip(other.iter())
+                    .filter(|(gen, gen_other)| gen != gen_other)
+                    .count() as f64)
+                / max_length as f64
+        }
     }
 }
