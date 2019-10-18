@@ -82,9 +82,9 @@ pub struct Fitness {
 #[derive(Debug)]
 pub struct IndWithFitness<T: PartialEq + Send + Sync, Ind: Genotype<T>> {
     /// Individual
-    ind: Ind,
+    pub ind: Ind,
     /// Fitness (can be not computed yet)
-    fitness: Option<Fitness>,
+    pub fitness: Option<Fitness>,
     _phantom: PhantomData<T>,
 }
 
