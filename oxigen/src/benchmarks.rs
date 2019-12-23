@@ -9,7 +9,7 @@ use rand::prelude::*;
 use std::fmt::Display;
 use std::iter::FromIterator;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 struct QueensBoard(Vec<u8>);
 impl Display for QueensBoard {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
@@ -43,6 +43,8 @@ impl FromIterator<u8> for QueensBoard {
 
 impl Genotype<u8> for QueensBoard {
     type ProblemSize = u8;
+    #[cfg(feature = "global_cache")]
+    type GenotypeHash = Self;
 
     fn iter(&self) -> std::slice::Iter<u8> {
         self.0.iter()
@@ -116,6 +118,11 @@ impl Genotype<u8> for QueensBoard {
 
     fn is_solution(&self, fitness: f64) -> bool {
         fitness as usize == self.0.len() - 1
+    }
+
+    #[cfg(feature = "global_cache")]
+    fn hash(&self) -> Self {
+        self.clone()
     }
 }
 
@@ -295,7 +302,7 @@ fn bench_cross_uniform_255inds(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_not_cached_fitness_1024inds(b: &mut Bencher) {
+fn bench_fitness_not_cached_1024inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -325,6 +332,33 @@ fn bench_fitness_1024inds(b: &mut Bencher) {
     let mut gen_exec = test::black_box(
         GeneticExecution::<u8, QueensBoard>::new()
             .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .global_cache(false),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    b.iter(|| {
+        gen_exec.compute_fitnesses(true);
+        for ind in &mut gen_exec.population {
+            ind.fitness = None;
+        }
+    });
+}
+
+#[bench]
+#[cfg(feature = "global_cache")]
+fn bench_fitness_global_cache_1024inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
             .genotype_size(n_queens as u8),
     );
     // Initialize randomly the population
@@ -343,7 +377,7 @@ fn bench_fitness_1024inds(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_not_cached_fitness_age_1024inds(b: &mut Bencher) {
+fn bench_fitness_age_not_cached_1024inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
@@ -380,6 +414,7 @@ fn bench_fitness_age_1024inds(b: &mut Bencher) {
         GeneticExecution::<u8, QueensBoard>::new()
             .population_size(population_size)
             .genotype_size(n_queens as u8)
+            .global_cache(false)
             .age_function(Box::new(AgeFunctions::Quadratic(
                 AgeThreshold(0),
                 AgeSlope(1_f64),

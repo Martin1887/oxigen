@@ -40,6 +40,19 @@ Oxigen provides the following features:
 * The two previous additions allow to search different solutions in different search space areas in order to avoid local suboptimal solutions and find different solutions.
 * Other minor improvements.
 
+## New in version 2.1:
+The optional feature `global_cache` adds a `HashMap` saving the evaluation of each individual in the full execution.
+
+This cache is useful when the evaluation of each individual is expensive, and it complements the individual-based cache already existing in previous versions (if an individual has been evaluated it is not reevaluated unless `cache_fitness` is `false`). In other words, this global cache saves the evaluation of new individuals that are equal to another individual that was evaluated before.
+
+Note that the global cache is not always better, since if the fitness function is cheap the cost of getting and inserting into the cache can be more expensive than it. Take also into account the increasing of RAM usage of the global cache.
+
+To enable the global cache add the feature `global_cache` in the Cargo.toml of your project and set to `true` the `cache_fitness` (always `true` by default) and `global_cache` (`true` by default when the `global_cache` is enabled) properties of your `GeneticExeution`. Example of Cargo.toml:
+```
+[dependencies]
+oxigen = { version="^2.1", features=["global_cache"] }
+```
+
 
 ## Usage
 
@@ -180,11 +193,12 @@ test benchmarks::bench_cross_uniform_255inds                                    
 test benchmarks::bench_distance_255                                                                        ... bench:      20,715 ns/iter (+/- 1,648)
 test benchmarks::bench_fitness_1024inds                                                                    ... bench:     377,344 ns/iter (+/- 8,617)
 test benchmarks::bench_fitness_age_1024inds                                                                ... bench:      31,360 ns/iter (+/- 1,204)
+test benchmarks::bench_fitness_age_not_cached_1024inds                                                     ... bench:     395,056 ns/iter (+/- 24,407)
+test benchmarks::bench_fitness_global_cache_1024inds                                                       ... bench:     340,087 ns/iter (+/- 28,889)
+test benchmarks::bench_fitness_not_cached_1024inds                                                         ... bench:     373,966 ns/iter (+/- 60,244)
 test benchmarks::bench_get_fitnesses_1024inds                                                              ... bench:      18,951 ns/iter (+/- 868)
 test benchmarks::bench_get_solutions_1024inds                                                              ... bench:      30,133 ns/iter (+/- 1,612)
 test benchmarks::bench_mutation_1024inds                                                                   ... bench:          13 ns/iter (+/- 0)
-test benchmarks::bench_not_cached_fitness_1024inds                                                         ... bench:     373,966 ns/iter (+/- 60,244)
-test benchmarks::bench_not_cached_fitness_age_1024inds                                                     ... bench:     395,056 ns/iter (+/- 24,407)
 test benchmarks::bench_selection_cup_255inds                                                               ... bench:     344,873 ns/iter (+/- 40,519)
 test benchmarks::bench_selection_roulette_256inds                                                          ... bench:     140,994 ns/iter (+/- 1,294)
 test benchmarks::bench_selection_tournaments_256inds                                                       ... bench:     420,272 ns/iter (+/- 49,178)

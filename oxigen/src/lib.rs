@@ -38,6 +38,8 @@ use historian::Histo;
 use rand::distributions::{Standard, Uniform};
 use rand::prelude::*;
 use rayon::prelude::*;
+#[cfg(feature = "global_cache")]
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::sync::mpsc::channel;
@@ -131,6 +133,13 @@ pub struct GeneticExecution<T: PartialEq + Send + Sync, Ind: Genotype<T>> {
     stop_criterion: Box<dyn StopCriterion>,
     /// Cache fitness value of individuals or compute it in each iteration.
     cache_fitness: bool,
+    /// Global cache for all evaluated individuals, i.e., if a new individual is
+    /// equal to a previous individual its fitness is not recomputed. Only valid
+    /// if cache_fitness is true.
+    global_cache: bool,
+    /// HashMap used for the global cache
+    #[cfg(feature = "global_cache")]
+    cache_map: HashMap<Ind::GenotypeHash, f64>,
     /// Progress log, writes statistics of the population every certain number of generations.
     progress_log: (u64, Option<File>),
     /// Population log, writes the population and fitnesses every certain number of generations.
@@ -152,6 +161,13 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> Default for GeneticExecution<
             survival_pressure: Box::new(SurvivalPressureFunctions::Worst),
             stop_criterion: Box::new(StopCriteria::SolutionFound),
             cache_fitness: true,
+            global_cache: if cfg!(feature = "global_cache") {
+                true
+            } else {
+                false
+            },
+            #[cfg(feature = "global_cache")]
+            cache_map: HashMap::new(),
             progress_log: (0, None),
             population_log: (0, None),
         }
@@ -241,6 +257,21 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     /// Sets the cache fitness flag.
     pub fn cache_fitness(mut self, new_cache: bool) -> Self {
         self.cache_fitness = new_cache;
+        self
+    }
+
+    /// Sets the global cache flag.
+    /// Panics: when trying to put it true without `global_cache` feature enabled.
+    pub fn global_cache(mut self, new_global_cache: bool) -> Self {
+        if cfg!(feature = "global_cache") {
+            self.global_cache = new_global_cache;
+        } else {
+            if new_global_cache {
+                panic!("global_cache feature must been enabled to enable global_cache");
+            } else {
+                self.global_cache = false;
+            }
+        }
         self
     }
 
@@ -466,21 +497,72 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             .collect::<Vec<f64>>()
     }
 
+    #[cfg(feature = "global_cache")]
     fn compute_fitnesses(&mut self, refresh_on_nocache: bool) {
-        if self.cache_fitness || !refresh_on_nocache {
+        if cfg!(feature = "global_cache") && self.cache_fitness && self.global_cache {
+            let (sender, receiver) = channel();
             self.population
-                .par_iter_mut()
-                .filter(|indwf| indwf.fitness.is_none())
-                .for_each(|indwf| {
-                    let new_fit_value = indwf.ind.fitness();
-                    indwf.fitness = Some(Fitness {
-                        age: 0,
-                        fitness: new_fit_value,
-                        original_fitness: new_fit_value,
-                    });
+                .par_iter()
+                .enumerate()
+                .filter(|(_i, indwf)| indwf.fitness.is_none())
+                .for_each_with(sender, |s, (i, indwf)| {
+                    let mut hashed_ind = None;
+                    let new_fit_value = if self.cache_fitness && self.global_cache {
+                        hashed_ind = Some(self.population[i].ind.hash());
+                        match self.cache_map.get(&indwf.ind.hash()) {
+                            Some(val) => *val,
+                            None => indwf.ind.fitness(),
+                        }
+                    } else {
+                        indwf.ind.fitness()
+                    };
+                    s.send((i, new_fit_value, hashed_ind)).unwrap();
                 });
+            for (i, new_fit_value, hashed_ind) in receiver {
+                match self.population[i].fitness {
+                    Some(fit) => {
+                        self.population[i].fitness = Some(Fitness {
+                            fitness: new_fit_value,
+                            age: fit.age,
+                            original_fitness: fit.original_fitness,
+                        })
+                    }
+                    None => {
+                        self.population[i].fitness = Some(Fitness {
+                            age: 0,
+                            fitness: new_fit_value,
+                            original_fitness: new_fit_value,
+                        })
+                    }
+                }
+                if self.cache_fitness && self.global_cache {
+                    let hashed_ind = hashed_ind.unwrap();
+                    if !self.cache_map.contains_key(&hashed_ind) {
+                        self.cache_map.insert(hashed_ind, new_fit_value);
+                    }
+                }
+            }
         } else {
-            self.population.par_iter_mut().for_each(|indwf| {
+            self.compute_fitnesses_without_global_cache(refresh_on_nocache);
+        }
+    }
+
+    #[cfg(not(feature = "global_cache"))]
+    fn compute_fitnesses(&mut self, refresh_on_nocache: bool) {
+        self.compute_fitnesses_without_global_cache(refresh_on_nocache);
+    }
+
+    fn compute_fitnesses_without_global_cache(&mut self, refresh_on_nocache: bool) {
+        self.population
+            .par_iter_mut()
+            .filter(|indwf| {
+                if refresh_on_nocache {
+                    true
+                } else {
+                    indwf.fitness.is_none()
+                }
+            })
+            .for_each(|indwf| {
                 let new_fit_value = indwf.ind.fitness();
                 match indwf.fitness {
                     Some(fit) => {
@@ -488,7 +570,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                             fitness: new_fit_value,
                             age: fit.age,
                             original_fitness: fit.original_fitness,
-                        });
+                        })
                     }
                     None => {
                         indwf.fitness = Some(Fitness {
@@ -499,7 +581,6 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                     }
                 }
             });
-        }
     }
 
     fn age_unfitness(&mut self) {

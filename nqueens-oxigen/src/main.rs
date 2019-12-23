@@ -7,7 +7,7 @@ use rand::prelude::*;
 use std::fmt::Display;
 use std::fs::File;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, std::hash::Hash)]
 struct QueensBoard(Vec<u8>);
 impl Display for QueensBoard {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
@@ -30,6 +30,7 @@ impl Display for QueensBoard {
 
 impl Genotype<u8> for QueensBoard {
     type ProblemSize = u8;
+    type GenotypeHash = Self;
 
     fn iter(&self) -> std::slice::Iter<u8> {
         self.0.iter()
@@ -110,6 +111,10 @@ impl Genotype<u8> for QueensBoard {
     fn is_solution(&self, fitness: f64) -> bool {
         fitness as usize == self.0.len()
     }
+
+    fn hash(&self) -> Self {
+        self.clone()
+    }
 }
 
 fn main() {
@@ -152,6 +157,8 @@ fn main() {
         .stop_criterion(Box::new(StopCriteria::SolutionsFound(
             4.min(n_queens as usize / 2),
         )))
+        .select_function(Box::new(SelectionFunctions::Cup))
+        .stop_criterion(Box::new(StopCriteria::SolutionFound))
         .progress_log(200_000, progress_log)
         .population_log(200_000, population_log)
         .run();

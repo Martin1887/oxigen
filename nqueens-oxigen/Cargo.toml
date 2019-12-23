@@ -1,7 +1,7 @@
 [package]
 name = "nqueens-oxigen"
 description = "N Queens problem resolution using oxigen."
-version = "2.0.0"
+version = "2.1.0"
 authors = ["Martin1887 <marcos.martin.pozo.delgado@gmail.com>"]
 repository = "https://github.com/Martin1887/oxigen"
 readme = "../README.md"
@@ -11,4 +11,4 @@ categories = ["algorithms", "science"]
 
 [dependencies]
 rand = "0.7"
-oxigen = { path = "../oxigen" }
+oxigen = { path = "../oxigen", features=["global_cache"] }
