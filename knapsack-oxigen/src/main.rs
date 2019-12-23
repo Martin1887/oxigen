@@ -23,12 +23,12 @@ impl Display for Item {
 }
 
 #[derive(Clone)]
-struct Knapsack {
+struct Knapsack<'a> {
     capacity: f64,
     items: Vec<bool>,
-    available_items: Vec<Item>,
+    available_items: &'a [Item],
 }
-impl Display for Knapsack {
+impl<'a> Display for Knapsack<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         let mut s = format!("Capacity: {}, Items: ", self.capacity);
         let mut first = true;
@@ -43,14 +43,14 @@ impl Display for Knapsack {
         write!(f, "{}]", s)
     }
 }
-impl Debug for Knapsack {
+impl<'a> Debug for Knapsack<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(f, "{}", self)
     }
 }
 
-impl Genotype<bool> for Knapsack {
-    type ProblemSize = (f64, Vec<Item>);
+impl<'a> Genotype<bool> for Knapsack<'a> {
+    type ProblemSize = (f64, &'a [Item]);
 
     fn iter(&self) -> std::slice::Iter<bool> {
         self.items.iter()
@@ -66,7 +66,7 @@ impl Genotype<bool> for Knapsack {
         let mut individual = Knapsack {
             capacity: size.0,
             items: Vec::with_capacity(size.1.len()),
-            available_items: size.1.clone(),
+            available_items: size.1,
         };
         let mut rgen = SmallRng::from_entropy();
 
@@ -188,7 +188,7 @@ fn main() {
     }
     let (solutions, generation, progress, _population) = GeneticExecution::<bool, Knapsack>::new()
         .population_size(population_size)
-        .genotype_size((capacity, items))
+        .genotype_size((capacity, &items))
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
             start: 15.0,
             bound: 0.005,
@@ -211,7 +211,7 @@ fn main() {
             NichesSigma(0.2),
         )))
         .survival_pressure_function(Box::new(
-            SurvivalPressureFunctions::DeterministicOverpopulation,
+            SurvivalPressureFunctions::CompetitiveOverpopulation(M::new(48, 32, 64)),
         ))
         .progress_log(100, progress_log)
         .population_log(500, population_log)
