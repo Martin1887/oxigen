@@ -1,7 +1,8 @@
 language: rust
 rust:
   - stable
+before_script: cd oxigen
 script:
-  - cargo build --verbose --all
-  - cargo test --verbose --all
+  - cargo build --verbose
+  - cargo test --verbose
 
