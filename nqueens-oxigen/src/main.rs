@@ -157,8 +157,6 @@ fn main() {
         .stop_criterion(Box::new(StopCriteria::SolutionsFound(
             4.min(n_queens as usize / 2),
         )))
-        .select_function(Box::new(SelectionFunctions::Cup))
-        .stop_criterion(Box::new(StopCriteria::SolutionFound))
         .progress_log(200_000, progress_log)
         .population_log(200_000, population_log)
         .run();
