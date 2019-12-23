@@ -51,7 +51,7 @@ pub enum PopulationRefitnessFunctions {
     /// Remains the fitness unmodified.
     None,
     /// Scales the fitness using the formula `f' = f^beta / m`, where `m` is
-    /// the sum of (1 - distance / sigam) for each individual in the population.
+    /// the sum of (1 - distance / sigma) for each individual in the population.
     Niches(NichesAlpha, Box<NichesBetaRates>, NichesSigma),
 }
 
