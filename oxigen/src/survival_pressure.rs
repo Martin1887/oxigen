@@ -473,6 +473,13 @@ impl SurvivalPressureFunctions {
         population: &mut Vec<IndWithFitness<T, G>>,
         parents_children: &[Reproduction],
     ) {
+        if m < parents_children.len() * 2 {
+            panic!(
+                "m < children length. m: {}, children_len: {}",
+                m,
+                parents_children.len() * 2
+            )
+        }
         let mut killed = Vec::with_capacity(parents_children.len() * 2);
         let mut choosable: Vec<usize> = Vec::with_capacity(m);
         let mut rgen = SmallRng::from_entropy();
@@ -517,6 +524,13 @@ impl SurvivalPressureFunctions {
         population: &mut Vec<IndWithFitness<T, G>>,
         parents_children: &[Reproduction],
     ) {
+        if m < parents_children.len() * 2 {
+            panic!(
+                "m < children length. m: {}, children_len: {}",
+                m,
+                parents_children.len() * 2
+            )
+        }
         let mut killed = Vec::with_capacity(parents_children.len() * 2);
         let mut choosable: Vec<usize> = Vec::with_capacity(m);
         let mut rgen = SmallRng::from_entropy();
