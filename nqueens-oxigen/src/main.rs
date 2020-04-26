@@ -29,7 +29,7 @@ impl Display for QueensBoard {
 }
 
 impl Genotype<u8> for QueensBoard {
-    type ProblemSize = u8;
+    type Environment = u8;
     type GenotypeHash = Self;
 
     fn iter(&self) -> std::slice::Iter<u8> {
@@ -42,7 +42,7 @@ impl Genotype<u8> for QueensBoard {
         self.0 = genes.collect();
     }
 
-    fn generate(size: &Self::ProblemSize) -> Self {
+    fn generate(size: &Self::Environment) -> Self {
         let mut individual = Vec::with_capacity(*size as usize);
         let mut rgen = SmallRng::from_entropy();
         for _i in 0..*size {
@@ -131,7 +131,7 @@ fn main() {
 
     let (solutions, generation, progress, _population) = GeneticExecution::<u8, QueensBoard>::new()
         .population_size(population_size)
-        .genotype_size(n_queens as u8)
+        .environment(n_queens as u8)
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
             start: f64::from(n_queens) / (2_f64 + 4_f64 * log2) / 100_f64,
             bound: 0.0005,
