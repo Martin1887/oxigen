@@ -289,7 +289,7 @@ impl<'a> FdParams<'a> {
 impl<'a> Genotype<u8> for FdParams<'a> {
     // The path to the fast-downard.py and the folder with domains and problems
     // A instance of a default hasher is used too to hash the genes as SAS filenames.
-    type ProblemSize = &'a [&'a str];
+    type Environment = &'a [&'a str];
     type GenotypeHash = Self;
 
     fn iter(&self) -> std::slice::Iter<u8> {
@@ -302,7 +302,7 @@ impl<'a> Genotype<u8> for FdParams<'a> {
         self.genes = genes.collect();
     }
 
-    fn generate(size: &Self::ProblemSize) -> Self {
+    fn generate(size: &Self::Environment) -> Self {
         let mut individual = Vec::with_capacity(8 as usize);
         let mut rgen = SmallRng::from_entropy();
         for i in 0..11 {
@@ -414,7 +414,7 @@ fn main() {
 
     let (_solutions, generation, progress, _population) = GeneticExecution::<u8, FdParams>::new()
         .population_size(population_size)
-        .genotype_size(&fd_params)
+        .environment(&fd_params)
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
             start: 0.05,
             bound: 0.005,
