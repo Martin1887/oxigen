@@ -11,7 +11,7 @@ Oxigen provides the following features:
 * Customizable mutation and selection rates with constant, linear and Quadratic functions according to generations built-in (you can implement your own functions via the `MutationRate` and `SelectionRate` traits).
 * Customizable age unfitness of individuals, with no unfitness, linear and Quadratic unfitness with threshold according to generations of the individual built-in (you can implement your own age functions via the `Age` trait).
 * Accumulated `Roulette`, `Tournaments` and `Cup` built-in selection functions (you can implement your own selection functions via the `Selection` trait).
-* `SingleCrossPoint`, `MultiCrossPoint` and `UniformCross` built-in crossover functions (you can implement your own crossover function via the `Crossover` trait).
+* `SingleCrossPoint`, `MultiCrossPoint`, `UniformCross`, and `UniformPartiallyMatched` built-in crossover functions (you can implement your own crossover function via the `Crossover` trait).
 * Many built-in survival pressure functions. You can implement your own survival pressure functions via the `SurvivalPressure` trait.
 * `Niches` built-in `PopulationRefitness` function. You can implement your own population refitness functions via the `PopulationRefitness` trait.
 * `SolutionFound`, `Generation` and `Progress` and more built-in stop criteria (you can implement your own stop criteria via the `StopCriterion` trait).
