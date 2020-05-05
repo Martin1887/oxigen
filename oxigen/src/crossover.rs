@@ -24,7 +24,9 @@ pub enum CrossoverFunctions {
     /// Uniform Crossover.
     UniformCross,
     /// Uniform Partially Matched
-    UniformPartiallyMatched(f32)
+    UniformPartiallyMatched(f32),
+    /// Partially Matched
+    PartiallyMatched
 }
 
 impl<T: PartialEq, G: Genotype<T>> Crossover<T, G> for CrossoverFunctions {
@@ -168,6 +170,69 @@ impl<T: PartialEq, G: Genotype<T>> Crossover<T, G> for CrossoverFunctions {
                         p2[temp1] = p2[temp2];
                         p2[temp2] = p2[temp1];
                     }
+                }
+
+                let mut child1 = ind1.clone();
+                child1.from_iter(
+                    i1.iter().map(|loc| {
+                        replace(&mut ind1_temp[*loc], None).unwrap()
+                    })
+                );
+
+                let mut child2 = ind2.clone();
+                child2.from_iter(
+                    i2.iter().map(|loc| {
+                        replace(&mut ind2_temp[*loc], None).unwrap()
+                    })
+                );
+
+                (child1, child2)
+            }
+
+            PartiallyMatched => {
+                let size = min(ind1.iter().len(), ind2.iter().len());
+
+                let mut ind1_temp : Vec<Option<T>> = ind1.clone().into_iter().map(|e| Some(e)).collect();
+                let mut ind2_temp : Vec<Option<T>> = ind2.clone().into_iter().map(|e| Some(e)).collect();
+
+                let mut i1 : Vec<usize> = (0..ind1_temp.len()).collect();
+                let mut i2 : Vec<usize> = (0..ind2_temp.len()).collect();
+
+                let mut p1 = vec![0; size];
+                let mut p2 = vec![0; size];
+
+                for i in 0..size {
+                    p1[i1[i]] = i;
+                    p2[i2[i]] = i;
+                }
+
+                // choose crossover points
+                let mut cxpoint1 = SmallRng::from_entropy().sample(Uniform::from(1..size));
+                let mut cxpoint2 = SmallRng::from_entropy().sample(Uniform::from(1..size-1));
+
+                if cxpoint2 >= cxpoint1 {
+                    cxpoint2 += 1;
+                } else {
+                    let temp = cxpoint1;
+                    cxpoint1 = cxpoint2;
+                    cxpoint2 = temp;
+                }
+
+                // crossover between points
+                for i in cxpoint1..cxpoint2 {
+                    let temp1 = i1[i];
+                    let temp2 = i2[i];
+
+                    i1[i] = temp2;
+                    i1[p1[temp2]] = temp1;
+
+                    i2[i] = temp1;
+                    i2[p2[temp1]] = temp2;
+
+                    p1[temp1] = p1[temp2];
+                    p1[temp2] = p1[temp1];
+                    p2[temp1] = p2[temp2];
+                    p2[temp2] = p2[temp1];
                 }
 
                 let mut child1 = ind1.clone();
