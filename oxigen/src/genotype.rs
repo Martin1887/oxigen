@@ -34,7 +34,7 @@ pub trait Genotype<T: PartialEq>: Display + Clone + Send + Sync {
     fn fitness(&self) -> f64;
 
     /// Defines the manner in which an individual is mutated when
-    /// an elemennt of the individual is selected to mutate.
+    /// an element of the individual is selected to mutate.
     fn mutate(&mut self, rgen: &mut SmallRng, index: usize);
 
     /// Defines if an individual is a valid solution to the problem.
