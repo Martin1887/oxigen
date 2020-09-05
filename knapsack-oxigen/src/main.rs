@@ -76,9 +76,7 @@ impl<'a> Genotype<bool> for Knapsack<'a> {
         individual
     }
 
-    // This function returns the mximum punctuaction possible (n-1, since in the
-    // worst case n-1 queens must be moved to get a solution) minus the number of
-    // queens that collide with others
+    // This function returns the sum of elements in the knapsack value
     fn fitness(&self) -> f64 {
         self.items
             .iter()
