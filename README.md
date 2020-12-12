@@ -3,7 +3,9 @@
 [![Build Status](https://travis-ci.com/Martin1887/oxigen.svg?branch=master)](https://travis-ci.com/Martin1887/oxigen)
 [![Current Crates.io Version](https://img.shields.io/crates/v/oxigen.svg)](https://crates.io/crates/oxigen)
 
-Oxigen is a parallel genetic algorithm library implemented in Rust. The name comes from the merge of `OXI`dación (Rust translated to Spanish) and `GEN`etic.
+Oxigen is a parallel genetic algorithm framework implemented in Rust. The name comes from the merge of `OXI`dación (Rust translated to Spanish) and `GEN`etic.
+
+Oxigen follows the [semver](https://semver.org/) specification for the names of the versions, so major version changes will never break the existent API.
 
 Oxigen provides the following features:
 
@@ -255,22 +257,21 @@ code you contribute must be:
 
 Note that unless you
 explicitly state otherwise, any contribution intentionally submitted for
-inclusion in oxigen by you shall be dual licensed under the MIT License and
-Apache License, Version 2.0, without any additional terms or conditions.
+inclusion in oxigen by you shall be Mozilla Public License Version 2.0, without any additional terms or conditions.
 
 ## Reference
-Pozo, M.M. "Oxigen: Fast, parallel, extensible and adaptable genetic algorithm library written in Rust".
+Pozo, Martín "Oxigen: Fast, parallel, extensible and adaptable genetic algorithms framework written in Rust".
 
 
 ### Bibtex
 ```tex
 @misc{
-  title={Oxigen: Fast, parallel, extensible and adaptable genetic algorithm library written in Rust},
-  author={Pozo M.M.},
+  title={Oxigen: Fast, parallel, extensible and adaptable genetic algorithms framwork written in Rust},
+  author={Pozo, Martín},
   howpublised = "\url{https://github.com/Martin1887/oxigen}"
 }
 ```
 
 ## License
 
-oxigen is licensed under Mozilla Public License 2.0.
+Oxigen is licensed under Mozilla Public License 2.0.
