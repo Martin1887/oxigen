@@ -65,7 +65,7 @@ impl Genotype<u8> for QueensBoard {
         QueensBoard(individual)
     }
 
-    // This function returns the mximum punctuaction possible (n-1, since in the
+    // This function returns the maximum score possible (n-1, since in the
     // worst case n-1 queens must be moved to get a solution) minus the number of
     // queens that collide with others
     fn fitness(&self) -> f64 {
@@ -127,9 +127,35 @@ impl Genotype<u8> for QueensBoard {
 }
 
 #[bench]
-fn bench_mutation_1024inds(b: &mut Bencher) {
+fn bench_generation_run_tournaments_1024inds(b: &mut Bencher) {
     let n_queens: u8 = test::black_box(255);
-    let mutation_rate = test::black_box(0.5);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .select_function(Box::new(SelectionFunctions::Tournaments(NTournaments(
+                population_size / 4,
+            ))))
+            .stop_criterion(Box::new(StopCriteria::Generation(1))),
+    );
+    while gen_exec.population.len() < gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    gen_exec.fix();
+    gen_exec.compute_fitnesses(true);
+    b.iter(|| {
+        gen_exec.run_loop();
+    });
+}
+
+#[bench]
+fn bench_refitness_none_1024inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
     let population_size = 2_i32.pow(log2 as u32) as usize;
     let mut gen_exec = test::black_box(
@@ -137,6 +163,63 @@ fn bench_mutation_1024inds(b: &mut Bencher) {
             .population_size(population_size)
             .genotype_size(n_queens as u8),
     );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    b.iter(|| {
+        gen_exec.refitness(1, 0.0, 0);
+    });
+}
+
+#[bench]
+fn bench_refitness_niches_1024inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8)
+            .population_refitness_function(Box::new(PopulationRefitnessFunctions::Niches(
+                NichesAlpha(1.0),
+                Box::new(NichesBetaRates::Constant(1.0)),
+                NichesSigma(0.2),
+            ))),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
+    b.iter(|| {
+        gen_exec.refitness(1, 0.0, 0);
+    });
+}
+
+#[bench]
+fn bench_mutation_1024inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let mutation_rate = test::black_box(0.1);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .genotype_size(n_queens as u8),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.genotype_size),
+            None,
+        ));
+    }
     b.iter(|| {
         gen_exec.mutate(mutation_rate);
     });
