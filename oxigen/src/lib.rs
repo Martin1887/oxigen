@@ -78,6 +78,10 @@ pub struct Fitness {
     fitness: f64,
     /// Original fitness of the individual before being unfitnessed by age.
     original_fitness: f64,
+    /// Age effect over the original fitness (usually negative).
+    age_effect: f64,
+    /// Refitness effect over the original fitness (usually negative).
+    refitness_effect: f64,
 }
 
 /// Struct that defines a pair of individual-fitness
@@ -521,6 +525,8 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                     age: 0,
                     fitness: new_fit_value,
                     original_fitness: new_fit_value,
+                    age_effect: 0.0,
+                    refitness_effect: 0.0,
                 });
                 // insert in cache if it is not already in it
                 self.cache_map.entry(hashed_ind).or_insert(new_fit_value);
@@ -552,9 +558,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                     Some(fit) => {
                         indwf.fitness = Some(Fitness {
                             fitness: new_fit_value,
-                            age: fit.age,
-                            // maintaining the original value has no sense
-                            original_fitness: new_fit_value,
+                            ..fit
                         })
                     }
                     None => {
@@ -562,6 +566,8 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                             age: 0,
                             fitness: new_fit_value,
                             original_fitness: new_fit_value,
+                            age_effect: 0.0,
+                            refitness_effect: 0.0,
                         })
                     }
                 }
@@ -574,10 +580,13 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             if let Some(fit) = indwf.fitness {
                 let age_exceed: i64 = fit.age as i64 - age_function.age_threshold() as i64;
                 if age_exceed >= 0 {
+                    let new_fit = age_function.age_unfitness(age_exceed as u64, fit.fitness);
                     indwf.fitness = Some(Fitness {
-                        fitness: age_function.age_unfitness(age_exceed as u64, fit.fitness),
+                        fitness: new_fit,
                         age: fit.age,
                         original_fitness: fit.original_fitness,
+                        age_effect: fit.age_effect + (new_fit - fit.fitness),
+                        refitness_effect: fit.refitness_effect,
                     });
                 }
             }
@@ -704,6 +713,8 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
                                 fitness: new_fit,
                                 age: fit.age,
                                 original_fitness: fit.original_fitness,
+                                age_effect: fit.age_effect,
+                                refitness_effect: new_fit - fit.fitness,
                             }),
                         ))
                         .unwrap()
