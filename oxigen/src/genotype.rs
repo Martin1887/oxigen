@@ -81,7 +81,7 @@ pub trait Genotype<T: PartialEq>: Display + Clone + Send + Sync {
         }
     }
 
-    /// Function to fastly hash the individual for global cache.
+    /// Function to quickly hash the individual for global cache.
     /// The default implementation is the `to_string()` function but
     /// another faster function can be implemented if the `Display`
     /// implementation is slow.
