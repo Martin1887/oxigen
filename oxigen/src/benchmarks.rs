@@ -23,7 +23,7 @@ impl Display for QueensBoard {
                     rs.push_str(" |")
                 }
             }
-            rs.push_str("\n");
+            rs.push('\n');
             s.push_str(&rs);
         }
         write!(f, "{}", s)
@@ -629,6 +629,8 @@ fn bench_survival_pressure_worst_255inds(b: &mut Bencher) {
                 age: 0,
                 fitness: 0.0,
                 original_fitness: 0.0,
+                age_effect: 0.0,
+                refitness_effect: 0.0,
             }),
         ));
     }
@@ -642,6 +644,8 @@ fn bench_survival_pressure_worst_255inds(b: &mut Bencher) {
                     age: 0,
                     fitness: 0.0,
                     original_fitness: 0.0,
+                    age_effect: 0.0,
+                    refitness_effect: 0.0,
                 }),
             ));
         }
@@ -689,6 +693,8 @@ fn bench_survival_pressure_children_replace_most_similar_255inds(b: &mut Bencher
                 age: 0,
                 fitness: 0.0,
                 original_fitness: 0.0,
+                age_effect: 0.0,
+                refitness_effect: 0.0,
             }),
         ));
     }
@@ -702,6 +708,8 @@ fn bench_survival_pressure_children_replace_most_similar_255inds(b: &mut Bencher
                     age: 0,
                     fitness: 0.0,
                     original_fitness: 0.0,
+                    age_effect: 0.0,
+                    refitness_effect: 0.0,
                 }),
             ));
         }
@@ -749,6 +757,8 @@ fn bench_survival_pressure_children_replace_parents_255inds(b: &mut Bencher) {
                 age: 0,
                 fitness: 0.0,
                 original_fitness: 0.0,
+                age_effect: 0.0,
+                refitness_effect: 0.0,
             }),
         ));
     }
@@ -762,6 +772,8 @@ fn bench_survival_pressure_children_replace_parents_255inds(b: &mut Bencher) {
                     age: 0,
                     fitness: 0.0,
                     original_fitness: 0.0,
+                    age_effect: 0.0,
+                    refitness_effect: 0.0,
                 }),
             ));
         }
@@ -809,6 +821,8 @@ fn bench_survival_pressure_children_fight_most_similar_255inds(b: &mut Bencher) 
                 age: 0,
                 fitness: 0.0,
                 original_fitness: 0.0,
+                age_effect: 0.0,
+                refitness_effect: 0.0,
             }),
         ));
     }
@@ -822,6 +836,8 @@ fn bench_survival_pressure_children_fight_most_similar_255inds(b: &mut Bencher) 
                     age: 0,
                     fitness: 0.0,
                     original_fitness: 0.0,
+                    age_effect: 0.0,
+                    refitness_effect: 0.0,
                 }),
             ));
         }
@@ -867,6 +883,8 @@ fn bench_survival_pressure_children_fight_parents_255inds(b: &mut Bencher) {
                 age: 0,
                 fitness: 0.0,
                 original_fitness: 0.0,
+                age_effect: 0.0,
+                refitness_effect: 0.0,
             }),
         ));
     }
@@ -880,6 +898,8 @@ fn bench_survival_pressure_children_fight_parents_255inds(b: &mut Bencher) {
                     age: 0,
                     fitness: 0.0,
                     original_fitness: 0.0,
+                    age_effect: 0.0,
+                    refitness_effect: 0.0,
                 }),
             ));
         }
@@ -931,6 +951,8 @@ fn bench_survival_pressure_overpopulation_255inds(b: &mut Bencher) {
                 age: 0,
                 fitness: 0.0,
                 original_fitness: 0.0,
+                age_effect: 0.0,
+                refitness_effect: 0.0,
             }),
         ));
     }
@@ -944,6 +966,8 @@ fn bench_survival_pressure_overpopulation_255inds(b: &mut Bencher) {
                     age: 0,
                     fitness: 0.0,
                     original_fitness: 0.0,
+                    age_effect: 0.0,
+                    refitness_effect: 0.0,
                 }),
             ));
         }
@@ -995,6 +1019,8 @@ fn bench_survival_pressure_competitive_overpopulation_255inds(b: &mut Bencher) {
                 age: 0,
                 fitness: 0.0,
                 original_fitness: 0.0,
+                age_effect: 0.0,
+                refitness_effect: 0.0,
             }),
         ));
     }
@@ -1008,6 +1034,8 @@ fn bench_survival_pressure_competitive_overpopulation_255inds(b: &mut Bencher) {
                     age: 0,
                     fitness: 0.0,
                     original_fitness: 0.0,
+                    age_effect: 0.0,
+                    refitness_effect: 0.0,
                 }),
             ));
         }
@@ -1055,6 +1083,8 @@ fn bench_survival_pressure_deterministic_overpopulation_255inds(b: &mut Bencher)
                 age: 0,
                 fitness: 0.0,
                 original_fitness: 0.0,
+                age_effect: 0.0,
+                refitness_effect: 0.0,
             }),
         ));
     }
@@ -1068,6 +1098,8 @@ fn bench_survival_pressure_deterministic_overpopulation_255inds(b: &mut Bencher)
                     age: 0,
                     fitness: 0.0,
                     original_fitness: 0.0,
+                    age_effect: 0.0,
+                    refitness_effect: 0.0,
                 }),
             ));
         }
@@ -1117,6 +1149,8 @@ fn bench_survival_pressure_children_replace_parents_and_the_rest_random_most_sim
                 age: 0,
                 fitness: 0.0,
                 original_fitness: 0.0,
+                age_effect: 0.0,
+                refitness_effect: 0.0,
             }),
         ));
     }
@@ -1130,6 +1164,8 @@ fn bench_survival_pressure_children_replace_parents_and_the_rest_random_most_sim
                     age: 0,
                     fitness: 0.0,
                     original_fitness: 0.0,
+                    age_effect: 0.0,
+                    refitness_effect: 0.0,
                 }),
             ));
         }
@@ -1179,6 +1215,8 @@ fn bench_survival_pressure_children_replace_parents_and_the_rest_most_similar_25
                 age: 0,
                 fitness: 0.0,
                 original_fitness: 0.0,
+                age_effect: 0.0,
+                refitness_effect: 0.0,
             }),
         ));
     }
@@ -1192,6 +1230,8 @@ fn bench_survival_pressure_children_replace_parents_and_the_rest_most_similar_25
                     age: 0,
                     fitness: 0.0,
                     original_fitness: 0.0,
+                    age_effect: 0.0,
+                    refitness_effect: 0.0,
                 }),
             ));
         }
