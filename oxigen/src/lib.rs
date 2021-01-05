@@ -310,23 +310,21 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
 
         let (generation, progress, solutions) = self.run_loop();
 
-        let mut final_solutions: Vec<Ind> = Vec::new();
-        for i in solutions {
-            final_solutions.push(self.population[i].ind.clone());
-        }
-        (final_solutions, generation, progress, self.population)
+        (solutions, generation, progress, self.population)
     }
 
-    fn run_loop(&mut self) -> (u64, f64, Vec<usize>) {
+    fn run_loop(&mut self) -> (u64, f64, Vec<Ind>) {
         let mut generation: u64 = 0;
         let mut last_progresses: Vec<f64> = Vec::new();
         let mut progress: f64 = std::f64::NAN;
-        let mut solutions: Vec<usize> = Vec::new();
+        // A HashSet is not used to not force to implement Hash in Genotype
+        let mut solutions: Vec<Ind> = Vec::new();
         let mut mutation_rate;
         let mut selection_rate;
         let mut last_best = 0f64;
 
         let mut current_fitnesses = self.get_fitnesses();
+        self.get_solutions(&mut solutions);
         while !self
             .stop_criterion
             .stop(generation, progress, solutions.len(), &current_fitnesses)
@@ -345,15 +343,19 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             current_fitnesses = self.get_fitnesses();
             let selected = self.selection.select(&current_fitnesses, selection_rate);
             let parents_children = self.cross(&selected);
+            // fitnesses must be computed for the new individuals to get solutions
+            self.compute_fitnesses(false);
+            self.get_solutions(&mut solutions);
             self.mutate(mutation_rate);
             self.fix();
             self.compute_fitnesses(false);
             self.refitness(generation, progress, solutions.len());
             self.age_unfitness();
+            // get solutions before kill
+            self.get_solutions(&mut solutions);
             self.survival_pressure_kill(&parents_children);
 
             current_fitnesses = self.get_fitnesses();
-            solutions = self.get_solutions();
             let best = current_fitnesses[0];
             progress = Self::update_progress(last_best, best, &mut last_progresses);
             last_best = best;
@@ -593,42 +595,24 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         });
     }
 
-    fn get_solutions(&self) -> Vec<usize> {
-        let mut solutions = Vec::new();
-        let mut solutions_individuals = Vec::new();
-        let (sender, receiver) = channel();
-
-        self.population
-            .par_iter()
-            .enumerate()
-            .for_each_with(sender, |s, (i, indwf)| {
-                if indwf
-                    .ind
-                    .is_solution(indwf.fitness.unwrap().original_fitness)
-                {
-                    s.send((i, indwf.ind.clone())).unwrap();
-                }
-            });
-        for (index, sol) in receiver {
-            if Self::not_found_yet_solution(&solutions_individuals, &sol) {
-                solutions_individuals.push(sol);
-                solutions.push(index);
+    fn get_solutions(&self, solutions: &mut Vec<Ind>) {
+        for indwf in &self.population {
+            if indwf
+                .ind
+                .is_solution(indwf.fitness.unwrap().original_fitness)
+                && Self::not_found_yet_solution(&solutions, &indwf.ind)
+            {
+                solutions.push(indwf.ind.clone());
             }
         }
-
-        solutions
     }
 
     #[allow(clippy::never_loop)]
     fn not_found_yet_solution(solutions: &[Ind], other: &Ind) -> bool {
-        let (sender, receiver) = channel();
-        solutions.par_iter().for_each_with(sender, |s, ind| {
+        for ind in solutions {
             if other.distance(ind) == 0.0 {
-                s.send(true).unwrap();
+                return false;
             }
-        });
-        for _found in receiver {
-            return false;
         }
 
         true

@@ -584,9 +584,16 @@ fn bench_get_solutions_1024inds(b: &mut Bencher) {
             None,
         ));
     }
+    // Put 128 random individuals as solutions (though they are not) to measure comparisons
+    let mut solutions = test::black_box(Vec::with_capacity(128));
+    for (i, ind) in gen_exec.population.iter().enumerate() {
+        if i % 8 == 0 {
+            solutions.push(ind.ind.clone());
+        }
+    }
     gen_exec.compute_fitnesses(true);
     b.iter(|| {
-        gen_exec.get_solutions();
+        gen_exec.get_solutions(&mut solutions);
     });
 }
 
