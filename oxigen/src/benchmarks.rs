@@ -426,10 +426,7 @@ fn bench_fitness_1024inds(b: &mut Bencher) {
         ));
     }
     b.iter(|| {
-        gen_exec.compute_fitnesses(true);
-        for ind in &mut gen_exec.population {
-            ind.fitness = None;
-        }
+        gen_exec.compute_fitnesses(false);
     });
 }
 
@@ -1265,7 +1262,7 @@ fn bench_distance_255(b: &mut Bencher) {
         ));
     }
     b.iter(move || {
-        test::black_box(gen_exec.population.par_iter().for_each(|ind| {
+        test::black_box(gen_exec.population.iter().for_each(|ind| {
             let _dist = gen_exec.population[0].ind.distance(&ind.ind);
         }))
     });
