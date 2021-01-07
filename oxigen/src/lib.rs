@@ -498,7 +498,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
 
     fn get_fitnesses(&self) -> Vec<f64> {
         self.population
-            .par_iter()
+            .iter()
             .map(|indwf| indwf.fitness.unwrap().fitness)
             .collect::<Vec<f64>>()
     }
