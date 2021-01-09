@@ -116,8 +116,8 @@ pub struct GeneticExecution<T: PartialEq + Send + Sync, Ind: Genotype<T>> {
     population_size: usize,
     /// Population with all individuals and their respective fitnesses.
     population: Vec<IndWithFitness<T, Ind>>,
-    /// Environment associated with the problem.
-    environment: Ind::Environment,
+    /// Size of the genotype problem.
+    genotype_size: Ind::ProblemSize,
     /// The mutation rate variation along iterations and progress.
     mutation_rate: Box<dyn MutationRate>,
     /// The number of stages in the cup whose individuals are selected to crossover.
@@ -155,7 +155,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> Default for GeneticExecution<
         GeneticExecution {
             population_size: 64,
             population: Vec::new(),
-            environment: Ind::Environment::default(),
+            genotype_size: Ind::ProblemSize::default(),
             mutation_rate: Box::new(MutationRates::Constant(0.1)),
             selection_rate: Box::new(SelectionRates::Constant(2)),
             selection: Box::new(SelectionFunctions::Cup),
@@ -194,9 +194,9 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         self
     }
 
-    /// Sets the environment.
-    pub fn environment(mut self, env: Ind::Environment) -> Self {
-        self.environment = env;
+    /// Sets the genotype size.
+    pub fn genotype_size(mut self, new_size: Ind::ProblemSize) -> Self {
+        self.genotype_size = new_size;
         self
     }
 
@@ -297,7 +297,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         // Initialize randomly the population
         while self.population.len() < self.population_size {
             self.population.push(IndWithFitness::new(
-                Ind::generate(&self.environment),
+                Ind::generate(&self.genotype_size),
                 None,
             ));
         }
