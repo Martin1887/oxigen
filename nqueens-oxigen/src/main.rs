@@ -21,7 +21,7 @@ impl Display for QueensBoard {
                     rs.push_str(" |")
                 }
             }
-            rs.push_str("\n");
+            rs.push('\n');
             s.push_str(&rs);
         }
         write!(f, "{}", s)
@@ -51,7 +51,7 @@ impl Genotype<u8> for QueensBoard {
         QueensBoard(individual)
     }
 
-    // This function returns the maximum punctuaction possible (n, since in the
+    // This function returns the maximum score possible (n, since in the
     // worst case n queens collide) minus the number of queens that collide with others
     fn fitness(&self) -> f64 {
         let size = self.0.len();
@@ -127,19 +127,22 @@ fn main() {
     let population_log =
         File::create("population.txt").expect("Error creating population log file");
     let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
-    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut population_size = 2_i32.pow(log2 as u32) as usize;
+    if n_queens <= 8 {
+        population_size *= 2;
+    }
 
     let (solutions, generation, progress, _population) = GeneticExecution::<u8, QueensBoard>::new()
         .population_size(population_size)
         .environment(n_queens as u8)
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
             start: f64::from(n_queens) / (2_f64 + 4_f64 * log2) / 100_f64,
-            bound: 0.0005,
+            bound: 0.005,
             coefficient: -0.00002,
         })))
         .selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
-            start: 2_f64,
-            bound: 5_f64,
+            start: 3_f64,
+            bound: 6_f64,
             coefficient: 0.05,
         })))
         .select_function(Box::new(SelectionFunctions::Tournaments(NTournaments(
@@ -147,18 +150,29 @@ fn main() {
         ))))
         .crossover_function(Box::new(CrossoverFunctions::UniformCross))
         .population_refitness_function(Box::new(PopulationRefitnessFunctions::Niches(
-            NichesAlpha(1.0),
-            Box::new(NichesBetaRates::Constant(1.0)),
-            NichesSigma(0.2),
+            NichesAlpha(0.8),
+            Box::new(NichesBetaRates::Linear(SlopeParams {
+                start: 0.0025,
+                bound: 10.0_f64.min(log2 * log2 / 6.0),
+                coefficient: 0.000001 * log2 * log2,
+            })),
+            NichesSigma(0.6),
         )))
+        // Fighting to parents works but the evolution is slower with many queens
+        /*
         .survival_pressure_function(Box::new(
-            SurvivalPressureFunctions::DeterministicOverpopulation,
-        ))
+            SurvivalPressureFunctions::ChildrenFightParentsAndTheRestWorst,
+        ))*/
+        .survival_pressure_function(Box::new(SurvivalPressureFunctions::Worst))
+        .age_function(Box::new(AgeFunctions::Linear(
+            AgeThreshold(5),
+            AgeSlope(0.5),
+        )))
         .stop_criterion(Box::new(StopCriteria::SolutionsFound(
             4.min(n_queens as usize / 2),
         )))
-        .progress_log(200_000, progress_log)
-        .population_log(200_000, population_log)
+        .progress_log(2_000, progress_log)
+        .population_log(2_000, population_log)
         .run();
 
     println!(

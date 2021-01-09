@@ -3,13 +3,17 @@
 [![Build Status](https://travis-ci.com/Martin1887/oxigen.svg?branch=master)](https://travis-ci.com/Martin1887/oxigen)
 [![Current Crates.io Version](https://img.shields.io/crates/v/oxigen.svg)](https://crates.io/crates/oxigen)
 
-Oxigen is a parallel genetic algorithm library implemented in Rust. The name comes from the merge of `OXI`dación (Rust translated to Spanish) and `GEN`etic.
+Oxigen is a parallel genetic algorithm framework implemented in Rust. The name comes from the merge of `OXI`dación (Rust translated to Spanish) and `GEN`etic.
+
+The changes introduced in each version can be found in [CHANGELOG.md](CHANGELOG.md).
+
+To migrate between major version check the migration guide ([MIGRATE.md](MIGRATE.md)).
 
 Oxigen provides the following features:
 
 * Fast and parallel genetic algorithm implementation (it solves the N Queens problem for N=255 in few seconds). For benchmarks view benchmarks section of this file.
-* Customizable mutation and selection rates with constant, linear and Quadratic functions according to generations built-in (you can implement your own functions via the `MutationRate` and `SelectionRate` traits).
-* Customizable age unfitness of individuals, with no unfitness, linear and Quadratic unfitness with threshold according to generations of the individual built-in (you can implement your own age functions via the `Age` trait).
+* Customizable mutation and selection rates with constant, linear and quadratic functions according to generations built-in (you can implement your own functions via the `MutationRate` and `SelectionRate` traits).
+* Customizable age unfitness of individuals, with no unfitness, linear and quadratic unfitness with threshold according to generations of the individual built-in (you can implement your own age functions via the `Age` trait).
 * Accumulated `Roulette`, `Tournaments` and `Cup` built-in selection functions (you can implement your own selection functions via the `Selection` trait).
 * `SingleCrossPoint`, `MultiCrossPoint`, `UniformCross`, `UniformPartiallyMatched`, and `PartiallyMatched` built-in crossover functions (you can implement your own crossover function via the `Crossover` trait).
 * Many built-in survival pressure functions. You can implement your own survival pressure functions via the `SurvivalPressure` trait.
@@ -28,42 +32,30 @@ Oxigen provides the following features:
 * Genetic executions can be resumed using the population of the last generation as initial population.
 * Coevolution is possible executing little genetic algorithm re-executions inside the fitness function.
 
-## Differences between 2 and 1 versions:
-* Oxigen 2 is more flexible because any `struct` with a `Vec` inside can implement `Genotype`. In 1 versions this was not possible because `Genotype` had to implement `FromIterator`. In 2 versions a `from_iter` function has been added instead.
-* Oxigen 2 fix the issue #3 ('Cuadratic' has been replaced by 'Quadratic' in built-in enums). This has not been fixed in 1 versions to not break the interface.
-* The `fix` function in `Genotype` returns a boolean to specify if the individual has been changed to recompute its fitness.
-* The number of solutions gotten in each generation is now the number of different solutions using the new `distance` function of `Genotype`.
-* The `u16` type has been changed by `usize` in `StopCriterion`, `MutationRate` and `SelectionRate` traits.
-* `PopulationRefitness` trait has been added to optionally refit the individuals of the population comparing them to the other individuals. `Niches` built-in `PopulationRefitness` function has been added.
-* The `SurvivalPressure` trait has been redefined and now it kills the individuals instead of returning the indexes to remove. It also receives a list with the pairs of parents and children of the generation.
-* Many `SurvivalPressure` built-in functions have been added, like `Overpouplation`, `CompetitiveOverpopulation`, `DeterministicOverpopulation`, `ChildrenFightParents`, `ChildrenFightMostsimilar`, etc.
-* The two previous additions allow to search different solutions in different search space areas in order to avoid local suboptimal solutions and find different solutions.
-* Other minor improvements.
-
-## New in version 2.1:
+## Optional feature `global_cache`
 The optional feature `global_cache` adds a `HashMap` saving the evaluation of each individual in the full execution.
 
 This cache is useful when the evaluation of each individual is expensive, and it complements the individual-based cache already existing in previous versions (if an individual has been evaluated it is not reevaluated unless `cache_fitness` is `false`). In other words, this global cache saves the evaluation of new individuals that are equal to another individual that was evaluated before.
 
-Note that the global cache is not always better, since if the fitness function is cheap the cost of getting and inserting into the cache can be more expensive than it. Take also into account the increasing of RAM usage of the global cache.
+Note that the global cache is not always better, since if the fitness function is cheap the cost of getting and inserting into the cache can be more expensive than it. Take also into account the increase of RAM usage of the global cache.
 
-To enable the global cache add the feature `global_cache` in the Cargo.toml of your project and set to `true` the `cache_fitness` (always `true` by default) and `global_cache` (`true` by default when the `global_cache` is enabled) properties of your `GeneticExeution`. Example of Cargo.toml:
+To enable the global cache add the feature `global_cache` in the Cargo.toml of your project and set to `true` the `cache_fitness` (always `true` by default) and `global_cache` (`true` by default when the `global_cache` is enabled) properties of your `GeneticExecution`. Example of Cargo.toml:
 ```
 [dependencies]
-oxigen = { version="^2.1", features=["global_cache"] }
+oxigen = { version="2.1", features=["global_cache"] }
 ```
 
 
 ## Usage
 
-In your `Cargo.toml` file add the `oxigen` dependency:
+In your `Cargo.toml` file add the `oxigen` dependency. Oxigen follows the [semver](https://semver.org/) specification for the names of the versions, so major version changes will never break the existent API and the last version should always be used. If a minimum version is required specify that minor version to include that version and all minor versions bigger than it.
 
 ```
 [dependencies]
-oxigen = "^2"
+oxigen = "2"
 ```
 
-To use `oxigen` `use oxigen::prelude::*` and call the `run` method over a `GeneticExecution` instance overwriting the default hyperparameters and functions folllowing your needs:
+To use `oxigen` `use oxigen::prelude::*` and call the `run` method over a `GeneticExecution` instance overwriting the default hyperparameters and functions following your needs:
 
 ```rust
 let n_queens: u8 = std::env::args()
@@ -108,7 +100,7 @@ For more information visit the [documentation](https://docs.rs/oxigen).
 
 ### Resuming a previous execution
 
-Since version 1.1.0, genetic algorithm executions return the population of the last generation and new genetic executions accept a initial population. This permits to resuming previous executions and it also enables coevolution, since little genetic algorithm re-executions can be launched in the fitness function.
+Since version 1.1.0, genetic algorithm executions return the population of the last generation and new genetic executions accept a initial population. This permits to resume previous executions and it also enables coevolution, since little genetic algorithm re-executions can be launched in the fitness function.
 
 In the following example a execution with 10000 generations is launched and after it is resumed until finding a solution with different rates.
 
@@ -178,7 +170,7 @@ To build oxigen, use `cargo` like for any Rust project:
 * `cargo build` to build in debug mode.
 * `cargo build --release` to build with optimizations.
 
-To run benchmarks, you will need a nightly Rust compiler. Uncomment the lines `// #![feature(test)]` and `// mod benchmarks;` from `lib.rs` and then bechmarks can be run using `cargo bench`.
+To run benchmarks, you will need a nightly Rust compiler. Uncomment the lines `// #![feature(test)]` and `// mod benchmarks;` from `lib.rs` and then benchmarks can be run using `cargo bench --jobs 1 --all-features`.
 
 
 ## Benchmarks
@@ -186,63 +178,64 @@ To run benchmarks, you will need a nightly Rust compiler. Uncomment the lines `/
 The following benchmarks have been created to measure the genetic algorithm functions performance:
 
 ```
-running 25 tests
-test benchmarks::bench_cross_multi_point_255inds                                                           ... bench:     348,371 ns/iter (+/- 10,506)
-test benchmarks::bench_cross_single_point_255inds                                                          ... bench:     113,986 ns/iter (+/- 10,657)
-test benchmarks::bench_cross_uniform_255inds                                                               ... bench:      88,426 ns/iter (+/- 2,302)
-test benchmarks::bench_distance_255                                                                        ... bench:      20,715 ns/iter (+/- 1,648)
-test benchmarks::bench_fitness_1024inds                                                                    ... bench:     377,344 ns/iter (+/- 8,617)
-test benchmarks::bench_fitness_age_1024inds                                                                ... bench:      31,360 ns/iter (+/- 1,204)
-test benchmarks::bench_fitness_age_not_cached_1024inds                                                     ... bench:     395,056 ns/iter (+/- 24,407)
-test benchmarks::bench_fitness_global_cache_1024inds                                                       ... bench:     340,087 ns/iter (+/- 28,889)
-test benchmarks::bench_fitness_not_cached_1024inds                                                         ... bench:     373,966 ns/iter (+/- 60,244)
-test benchmarks::bench_get_fitnesses_1024inds                                                              ... bench:      18,951 ns/iter (+/- 868)
-test benchmarks::bench_get_solutions_1024inds                                                              ... bench:      30,133 ns/iter (+/- 1,612)
-test benchmarks::bench_mutation_1024inds                                                                   ... bench:          13 ns/iter (+/- 0)
-test benchmarks::bench_selection_cup_255inds                                                               ... bench:     344,873 ns/iter (+/- 40,519)
-test benchmarks::bench_selection_roulette_256inds                                                          ... bench:     140,994 ns/iter (+/- 1,294)
-test benchmarks::bench_selection_tournaments_256inds                                                       ... bench:     420,272 ns/iter (+/- 49,178)
-test benchmarks::bench_survival_pressure_children_fight_most_similar_255inds                               ... bench:  14,948,961 ns/iter (+/- 989,864)
-test benchmarks::bench_survival_pressure_children_fight_parents_255inds                                    ... bench:     108,691 ns/iter (+/- 157)
-test benchmarks::bench_survival_pressure_children_replace_most_similar_255inds                             ... bench:  14,935,080 ns/iter (+/- 1,221,611)
-test benchmarks::bench_survival_pressure_children_replace_parents_255inds                                  ... bench:     167,392 ns/iter (+/- 15,839)
-test benchmarks::bench_survival_pressure_children_replace_parents_and_the_rest_most_similar_255inds        ... bench: 737,347,573 ns/iter (+/- 16,773,890)
-test benchmarks::bench_survival_pressure_children_replace_parents_and_the_rest_random_most_similar_255inds ... bench:   7,757,258 ns/iter (+/- 612,047)
-test benchmarks::bench_survival_pressure_competitive_overpopulation_255inds                                ... bench:  10,727,219 ns/iter (+/- 770,681)
-test benchmarks::bench_survival_pressure_deterministic_overpopulation_255inds                              ... bench:     173,745 ns/iter (+/- 609)
-test benchmarks::bench_survival_pressure_overpopulation_255inds                                            ... bench:  10,710,336 ns/iter (+/- 657,369)
-test benchmarks::bench_survival_pressure_worst_255inds                                                     ... bench:      20,318 ns/iter (+/- 298)
-test benchmarks::bench_update_progress_1024inds                                                            ... bench:       7,424 ns/iter (+/- 273)
+running 29 tests
+test benchmarks::bench_cross_multi_point_255inds                                                           ... bench:     895,332 ns/iter (+/- 34,409)
+test benchmarks::bench_cross_single_point_255inds                                                          ... bench:     227,517 ns/iter (+/- 4,802)
+test benchmarks::bench_cross_uniform_255inds                                                               ... bench:      73,370 ns/iter (+/- 9,106)
+test benchmarks::bench_distance_255                                                                        ... bench:      41,669 ns/iter (+/- 45)
+test benchmarks::bench_fitness_1024inds                                                                    ... bench:      14,260 ns/iter (+/- 3,789)
+test benchmarks::bench_fitness_age_1024inds                                                                ... bench:      32,495 ns/iter (+/- 5,705)
+test benchmarks::bench_fitness_age_not_cached_1024inds                                                     ... bench:     581,263 ns/iter (+/- 3,988)
+test benchmarks::bench_fitness_global_cache_1024inds                                                       ... bench:     343,314 ns/iter (+/- 25,763)
+test benchmarks::bench_fitness_not_cached_1024inds                                                         ... bench:     554,870 ns/iter (+/- 32,916)
+test benchmarks::bench_generation_run_tournaments_1024inds                                                 ... bench:   4,202,844 ns/iter (+/- 111,604)
+test benchmarks::bench_get_fitnesses_1024inds                                                              ... bench:         777 ns/iter (+/- 17)
+test benchmarks::bench_get_solutions_1024inds                                                              ... bench:       2,126 ns/iter (+/- 7)
+test benchmarks::bench_mutation_1024inds                                                                   ... bench:   1,553,265 ns/iter (+/- 23,022)
+test benchmarks::bench_refitness_niches_1024inds                                                           ... bench:      29,616 ns/iter (+/- 783)
+test benchmarks::bench_refitness_none_1024inds                                                             ... bench:      29,756 ns/iter (+/- 3,576)
+test benchmarks::bench_selection_cup_255inds                                                               ... bench:     357,611 ns/iter (+/- 37,254)
+test benchmarks::bench_selection_roulette_256inds                                                          ... bench:     141,654 ns/iter (+/- 1,338)
+test benchmarks::bench_selection_tournaments_256inds                                                       ... bench:     616,907 ns/iter (+/- 50,645)
+test benchmarks::bench_survival_pressure_children_fight_most_similar_255inds                               ... bench:  17,748,382 ns/iter (+/- 762,602)
+test benchmarks::bench_survival_pressure_children_fight_parents_255inds                                    ... bench:     139,405 ns/iter (+/- 2,267)
+test benchmarks::bench_survival_pressure_children_replace_most_similar_255inds                             ... bench:  17,716,416 ns/iter (+/- 739,662)
+test benchmarks::bench_survival_pressure_children_replace_parents_255inds                                  ... bench:     202,788 ns/iter (+/- 18,250)
+test benchmarks::bench_survival_pressure_children_replace_parents_and_the_rest_most_similar_255inds        ... bench: 1,387,504,266 ns/iter (+/- 45,914,604)
+test benchmarks::bench_survival_pressure_children_replace_parents_and_the_rest_random_most_similar_255inds ... bench:   9,389,378 ns/iter (+/- 1,224,136)
+test benchmarks::bench_survival_pressure_competitive_overpopulation_255inds                                ... bench:  12,803,024 ns/iter (+/- 1,946,079)
+test benchmarks::bench_survival_pressure_deterministic_overpopulation_255inds                              ... bench:     220,667 ns/iter (+/- 2,790)
+test benchmarks::bench_survival_pressure_overpopulation_255inds                                            ... bench:  12,243,512 ns/iter (+/- 726,154)
+test benchmarks::bench_survival_pressure_worst_255inds                                                     ... bench:      20,339 ns/iter (+/- 1,113)
+test benchmarks::bench_update_progress_1024inds                                                            ... bench:       7,595 ns/iter (+/- 378)
 ```
 
 These benchmarks have been executed in a Intel Core i7 6700K with 16 GB of DDR4
-and a 512 GB Samsung 950 Pro NVMe SSD in ext4 format in Fedora 30
-with Linux kernel 5.2.9.
+and a 1024 GB Samsung 970 Evo Plus NVMe SSD in ext4 format in Fedora 33
+with Linux kernel 5.9.16.
 
 The difference of performance among the different fitness benchmarks have the following explanations:
 
- * `bench_fitness` measures the performance of a cached execution cleaning the fitnesses after each bench iteration. This cleaning is the reason of being a bit slower than not cached benchmarks.
- * `bench_fitness_age` measures the performance with fitness cached in all bench iterations, so it is very much faster.
+ * `bench_fitness` measures the performance of a cached execution without cleaning the fitnesses after each bench iteration. This cleaning was not done in previous versions of this README and so it was higher.
+ * `bench_mutation` was very much faster in previous versions of this README because an error in the benchmark (empty population).
+ * `bench_fitness_age` measures the performance with fitness cached in all bench iterations, so it is slightly slower.
  * Not cached benchmarks measure the performance of not cached executions, with 1 generation individuals in the last case, so the performance is similar but a bit slower for the benchmark that must apply age unfitness.
  * The `children_fight_most_similar` and `children_replace_most_similar` functions have to call the distance function `c * p` times, where `c` is the number of children and `p` is the size of the population (255 and 1024 respectively in the benchmarks).
- * The `overpopulation` and `competitive_overpopulation` functions are similaer to `children_replace_most_similar` and `children_fight_most_similar` except to they are compared only with `m` individuals of the population (`m` is bigger than the number of children and smaller than the population size, 768 in the benchmarks). Therefore, 3/4 of the comparisons are done in these benchmarks compared to `children_replace_most_similar` and `children_fight_most_similar`.
- * `children_replace_parents_and_the_rest_random_most_similar` is similar to `children_replace_parents` but, after it, random individuals are chosen to fight against the most similar individual in the population until the population size is the original population size. This means between 0 and 254 times random chosing and distance cmoputation over the entire population in function of the repeated parents in each generation.
- * `children_replace_parents_and_the_rest_most_similar` is like the previous function but it searchs the pairs of most similar individuals in the population, which means p<sup>2</sup> distance function calls (2<sup>20</sup> in the benchmark).
+ * The `overpopulation` and `competitive_overpopulation` functions are similar to `children_replace_most_similar` and `children_fight_most_similar` except to they are compared only with `m` individuals of the population (`m` is bigger than the number of children and smaller than the population size, 768 in the benchmarks). Therefore, 3/4 of the comparisons are done in these benchmarks compared to `children_replace_most_similar` and `children_fight_most_similar`.
+ * `children_replace_parents_and_the_rest_random_most_similar` is similar to `children_replace_parents` but, after it, random individuals are chosen to fight against the most similar individual in the population until the population size is the original population size. This means between 0 and 254 times random choosing and distance computation over the entire population in function of the repeated parents in each generation.
+ * `children_replace_parents_and_the_rest_most_similar` is like the previous function but it searches the pairs of most similar individuals in the population, which means p<sup>2</sup> distance function calls (2<sup>20</sup> in the benchmark).
 
 
 ## Contributing
 
-Contributions are absolutely, positively welcome and encouraged! Contributions
-come in many forms. You could:
+Contributions are absolutely, positively welcome and encouraged! Contributions come in many forms. You could:
 
   1. Submit a feature request or bug report as an [issue](https://github.com/Martin1887/oxigen/issues).
   2. Ask for improved documentation as an [issue](https://github.com/Martin1887/oxigen/issues).
-  3. Comment on issues that require
-     feedback.
-  4. Contribute code via [pull requests](https://github.com/Martin1887/oxigen/pulls), don't forget to run `cargo fmt` before submitting your PR!
+  3. Comment on issues that require feedback.
+  4. Contribute code via [pull requests](https://github.com/Martin1887/oxigen/pulls).
 
-We aim to keep Rocket's code quality at the highest level. This means that any
-code you contribute must be:
+We aim to keep Oxigen's code quality at the highest level. This means that any code you contribute must be:
 
   * **Commented:** Public items _must_ be commented.
   * **Documented:** Exposed items _must_ have rustdoc comments with
@@ -253,24 +246,22 @@ code you contribute must be:
   * **Tested:** You should add (and pass) convincing tests for any functionality you add when it is possible.
   * **Focused:** Your code should do what it's supposed to do and nothing more.
 
-Note that unless you
-explicitly state otherwise, any contribution intentionally submitted for
-inclusion in oxigen by you shall be dual licensed under the MIT License and
-Apache License, Version 2.0, without any additional terms or conditions.
+Note that unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in Oxigen by you shall be licensed under Mozilla Public License 2.0.
+
 
 ## Reference
-Pozo, M.M. "Oxigen: Fast, parallel, extensible and adaptable genetic algorithm library written in Rust".
+Pozo, Martín "Oxigen: Fast, parallel, extensible and adaptable genetic algorithms framework written in Rust".
 
 
 ### Bibtex
 ```tex
 @misc{
-  title={Oxigen: Fast, parallel, extensible and adaptable genetic algorithm library written in Rust},
-  author={Pozo M.M.},
+  title={Oxigen: Fast, parallel, extensible and adaptable genetic algorithms framework written in Rust},
+  author={Pozo, Martín},
   howpublised = "\url{https://github.com/Martin1887/oxigen}"
 }
 ```
 
 ## License
 
-oxigen is licensed under Mozilla Public License 2.0.
+Oxigen is licensed under Mozilla Public License 2.0.

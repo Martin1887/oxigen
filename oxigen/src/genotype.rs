@@ -27,14 +27,14 @@ pub trait Genotype<T: PartialEq>: Display + Clone + Send + Sync {
     /// Set the genes of the individual from an iterator.
     fn from_iter<I: Iterator<Item = T>>(&mut self, I);
 
-    /// Randomly initiailzes an individual.
-    fn generate(size: &Self::Environment) -> Self;
+    /// Randomly initializes an individual.
+    fn generate(size: &Self::ProblemSize) -> Self;
 
     /// Returns a fitness value for an individual.
     fn fitness(&self) -> f64;
 
     /// Defines the manner in which an individual is mutated when
-    /// an elemennt of the individual is selected to mutate.
+    /// an element of the individual is selected to mutate.
     fn mutate(&mut self, rgen: &mut SmallRng, index: usize);
 
     /// Defines if an individual is a valid solution to the problem.
@@ -81,7 +81,7 @@ pub trait Genotype<T: PartialEq>: Display + Clone + Send + Sync {
         }
     }
 
-    /// Function to fastly hash the individual for global cache.
+    /// Function to quickly hash the individual for global cache.
     /// The default implementation is the `to_string()` function but
     /// another faster function can be implemented if the `Display`
     /// implementation is slow.

@@ -12,9 +12,12 @@ use PopulationRefitnessFunctions::*;
 /// individuals fitness comparing them to the others individuals in the population.
 /// This function is called when all individuals fitness have been computed and just
 /// before the survival pressure kill.
+///
+/// The refitness is done over the original fitness with age effects, but without
+/// taking into account refitnesses of previous generations.
 pub trait PopulationRefitness<T: PartialEq + Send + Sync, G: Genotype<T>>: Send + Sync {
     /// Modify the individual fitness comparing it with the other individuals in the
-    /// population. Called just before survival pressure kill.
+    /// population. Called just before age unfitness and survival pressure kill.
     ///
     /// # Parameters:
     /// - `individual_index`: The individual index inside the population.
@@ -68,44 +71,33 @@ impl<T: PartialEq + Send + Sync, G: Genotype<T>> PopulationRefitness<T, G>
     ) -> f64 {
         match self {
             None => {
-                population[individual_index]
-                    .fitness
-                    .unwrap()
-                    .original_fitness
+                let fit = population[individual_index].fitness.unwrap();
+                fit.original_fitness + fit.age_effect
             }
             Niches(alfa, beta, sigma) => {
                 let current_ind = &population[individual_index].ind;
-                let current_fitness = &population[individual_index].fitness;
-                let mut current_fitness = current_fitness.unwrap().original_fitness;
-                /*
-                let avg_sim: f64 = population
-                    .par_iter()
-                    .enumerate()
-                    .filter(|(i, _ind)| *i != individual_index)
-                    .map(|(_i, ind)| current_ind.similarity(&ind.0))
-                    .sum::<f64>()
-                    / (population.len() as f64 - 1.0);
-                */
-                let m = population
-                    .par_iter()
-                    .enumerate()
-                    .filter(|(i, _ind)| *i != individual_index)
-                    .map(|(_i, ind)| current_ind.distance(&ind.ind))
-                    .map(|d| {
-                        if d >= sigma.0 {
-                            0.0
-                        } else {
-                            (1.0 - (d / sigma.0)).powf(alfa.0)
-                        }
-                    })
-                    .sum::<f64>();
+                let fit = population[individual_index].fitness.unwrap();
+                let mut current_fitness = fit.original_fitness + fit.age_effect;
                 if current_fitness > 0.0 {
+                    let mut m = population
+                        .par_iter()
+                        .enumerate()
+                        .filter(|(i, _ind)| *i != individual_index)
+                        .map(|(_i, ind)| current_ind.distance(&ind.ind))
+                        .map(|d| {
+                            if d >= sigma.0 {
+                                0.0
+                            } else {
+                                1.0 - (d / sigma.0).powf(alfa.0)
+                            }
+                        })
+                        .sum::<f64>();
                     current_fitness =
                         current_fitness.powf(beta.rate(generation, progress, n_solutions));
-                    if m > 0.0 {
-                        current_fitness /= m;
+                    if m == 0.0 {
+                        m = f64::EPSILON;
                     }
-                    current_fitness
+                    current_fitness / m
                 } else {
                     current_fitness
                 }
