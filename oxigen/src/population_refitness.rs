@@ -95,7 +95,7 @@ impl<T: PartialEq + Send + Sync, G: Genotype<T>> PopulationRefitness<T, G>
                         if d >= sigma.0 {
                             0.0
                         } else {
-                            (1.0 - (d / sigma.0)).powf(alfa.0)
+                            1.0 - (d / sigma.0).powf(alfa.0)
                         }
                     })
                     .sum::<f64>();
