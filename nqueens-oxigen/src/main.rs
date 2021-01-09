@@ -21,7 +21,7 @@ impl Display for QueensBoard {
                     rs.push_str(" |")
                 }
             }
-            rs.push_str("\n");
+            rs.push('\n');
             s.push_str(&rs);
         }
         write!(f, "{}", s)
