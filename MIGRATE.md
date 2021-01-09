@@ -1,4 +1,4 @@
-# Instructions to migrate among between major versions
+# Instructions to migrate between Oxigen major versions
 
 ## Migrate from Oxigen 1.x to 2.x
 - Instead of implementing `FromIterator<T>` in your `Genotype<T>` struct, write a `from_iter<I: Iterator<Item = T>>(&mut self, genes: I)` function in the `Genotype` trait implementation that set the genes collecting the iterator:
