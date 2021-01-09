@@ -50,7 +50,7 @@ impl<'a> Debug for Knapsack<'a> {
 }
 
 impl<'a> Genotype<bool> for Knapsack<'a> {
-    type ProblemSize = (f64, &'a [Item]);
+    type Environment = (f64, &'a [Item]);
 
     fn iter(&self) -> std::slice::Iter<bool> {
         self.items.iter()
@@ -62,7 +62,7 @@ impl<'a> Genotype<bool> for Knapsack<'a> {
         self.items = genes.collect();
     }
 
-    fn generate(size: &Self::ProblemSize) -> Self {
+    fn generate(size: &Self::Environment) -> Self {
         let mut individual = Knapsack {
             capacity: size.0,
             items: Vec::with_capacity(size.1.len()),
@@ -186,7 +186,7 @@ fn main() {
     }
     let (solutions, generation, progress, _population) = GeneticExecution::<bool, Knapsack>::new()
         .population_size(population_size)
-        .genotype_size((capacity, &items))
+        .environment((capacity, &items))
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
             start: 15.0,
             bound: 0.005,

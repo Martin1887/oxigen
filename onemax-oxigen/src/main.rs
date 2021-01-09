@@ -17,7 +17,7 @@ impl Display for OneMax {
 }
 
 impl Genotype<bool> for OneMax {
-    type ProblemSize = usize;
+    type Environment = usize;
 
     fn iter(&self) -> std::slice::Iter<bool> {
         self.0.iter()
@@ -29,7 +29,7 @@ impl Genotype<bool> for OneMax {
         self.0 = genes.collect();
     }
 
-    fn generate(size: &Self::ProblemSize) -> Self {
+    fn generate(size: &Self::Environment) -> Self {
         let mut individual = Vec::with_capacity(*size as usize);
         let mut rgen = SmallRng::from_entropy();
         for _i in 0..*size {
@@ -61,7 +61,7 @@ fn main() {
     let log2 = (f64::from(problem_size as u32) * 4_f64).log2().ceil();
     let (solutions, generation, _progress, _population) = GeneticExecution::<bool, OneMax>::new()
         .population_size(population_size)
-        .genotype_size(problem_size)
+        .environment(problem_size)
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
             start: f64::from(problem_size as u32) / (8_f64 + 2_f64 * log2) / 100_f64,
             bound: 0.005,

@@ -15,7 +15,7 @@ Oxigen provides the following features:
 * Customizable mutation and selection rates with constant, linear and quadratic functions according to generations built-in (you can implement your own functions via the `MutationRate` and `SelectionRate` traits).
 * Customizable age unfitness of individuals, with no unfitness, linear and quadratic unfitness with threshold according to generations of the individual built-in (you can implement your own age functions via the `Age` trait).
 * Accumulated `Roulette`, `Tournaments` and `Cup` built-in selection functions (you can implement your own selection functions via the `Selection` trait).
-* `SingleCrossPoint`, `MultiCrossPoint` and `UniformCross` built-in crossover functions (you can implement your own crossover function via the `Crossover` trait).
+* `SingleCrossPoint`, `MultiCrossPoint`, `UniformCross`, `UniformPartiallyMatched`, and `PartiallyMatched` built-in crossover functions (you can implement your own crossover function via the `Crossover` trait).
 * Many built-in survival pressure functions. You can implement your own survival pressure functions via the `SurvivalPressure` trait.
 * `Niches` built-in `PopulationRefitness` function. You can implement your own population refitness functions via the `PopulationRefitness` trait.
 * `SolutionFound`, `Generation` and `Progress` and more built-in stop criteria (you can implement your own stop criteria via the `StopCriterion` trait).
@@ -72,7 +72,7 @@ let population_size = 2_i32.pow(log2 as u32) as usize;
 
 let (solutions, generation, progress) = GeneticExecution::<u8, QueensBoard>::new()
     .population_size(population_size)
-    .genotype_size(n_queens as u8)
+    .environment(n_queens as u8)
     .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
         start: f64::from(n_queens) / (8_f64 + 2_f64 * log2) / 100_f64,
         bound: 0.005,
@@ -119,7 +119,7 @@ let population_size = 2_i32.pow(log2 as u32) as usize;
 
 let (_solutions, _generation, _progress, population) = GeneticExecution::<u8, QueensBoard>::new()
     .population_size(population_size)
-    .genotype_size(n_queens as u8)
+    .environment(n_queens as u8)
     .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
         start: f64::from(n_queens) / (8_f64 + 2_f64 * log2) / 100_f64,
         bound: 0.005,
@@ -140,7 +140,7 @@ let (_solutions, _generation, _progress, population) = GeneticExecution::<u8, Qu
 
 let (solutions, generation, progress, _population) = GeneticExecution::<u8, QueensBoard>::new()
     .population_size(population_size)
-    .genotype_size(n_queens as u8)
+    .environment(n_queens as u8)
     .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
         start: f64::from(n_queens) / (8_f64 + 4_f64 * log2) / 100_f64,
         bound: 0.005,

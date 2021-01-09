@@ -9,10 +9,10 @@ use std::vec::IntoIter;
 /// It defines the fitness and mutation functions and the type of the
 /// individual representation.
 pub trait Genotype<T: PartialEq>: Display + Clone + Send + Sync {
-    /// The type that represents the problem size of the genotype. For example,
-    /// in the N Queens problem the size of the `ProblemSize` is a numeric type
+    /// The type that represents the problem environment. For example,
+    /// in the N Queens problem the `Environment` is a numeric type
     /// (the number of queens).
-    type ProblemSize: Default + Send + Sync;
+    type Environment: Default + Send + Sync;
 
     /// The type that is used for hashing, by default the self struct.
     #[cfg(feature = "global_cache")]
