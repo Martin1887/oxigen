@@ -28,7 +28,7 @@ pub trait Genotype<T: PartialEq>: Display + Clone + Send + Sync {
     fn from_iter<I: Iterator<Item = T>>(&mut self, I);
 
     /// Randomly initializes an individual.
-    fn generate(size: &Self::ProblemSize) -> Self;
+    fn generate(size: &Self::Environment) -> Self;
 
     /// Returns a fitness value for an individual.
     fn fitness(&self) -> f64;
