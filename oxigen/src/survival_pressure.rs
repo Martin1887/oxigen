@@ -59,7 +59,7 @@ pub enum SurvivalPressureFunctions {
     /// Kill the most similar individual to each child.
     ChildrenReplaceMostSimilar,
     /// Kill individuals that have been crossed. Note that since the same parents can produce
-    /// many different children (they are selected to cross several times) the populationn size
+    /// many different children (they are selected to cross several times) the population size
     /// can be increased using this function.
     ChildrenReplaceParents,
     /// Kill individuals that have been crossed and after that the worst individuals until reach
@@ -86,7 +86,7 @@ pub enum SurvivalPressureFunctions {
     ChildrenFightMostSimilar,
     /// Each child fight with a random parent in a parricide battle for survival.
     /// Note that because the same parents can produce many different children (they are selected
-    /// to cross several times) the populationn size can be increased using this function.
+    /// to cross several times) the population size can be increased using this function.
     ChildrenFightParents,
     /// Each child fight with a random parent in a parricide battle for survival and after that
     /// the worst individuals until reach the initial population size.
@@ -109,7 +109,7 @@ pub enum SurvivalPressureFunctions {
     /// the oldest individuals until reach the initial population size.
     ChildrenFightParentsAndTheRestOldest,
     /// `m` individuals are randomly selected from the population (note that n < m < population_size
-    /// where n is the number of generated individuals shall be true) and the most similars to the
+    /// where n is the number of generated individuals shall be true) and the most similar ones to the
     /// children are killed one by one.
     Overpopulation(M),
     /// Like `OverPopulation` but the existing individuals in the population that are most
