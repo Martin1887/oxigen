@@ -7,7 +7,6 @@ use super::prelude::*;
 use rand::distributions::Uniform;
 use rand::prelude::*;
 use std::fmt::Display;
-use std::iter::FromIterator;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct QueensBoard(Vec<u8>);
@@ -27,17 +26,6 @@ impl Display for QueensBoard {
             s.push_str(&rs);
         }
         write!(f, "{}", s)
-    }
-}
-
-impl FromIterator<u8> for QueensBoard {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = u8>,
-    {
-        QueensBoard {
-            0: iter.into_iter().collect(),
-        }
     }
 }
 
@@ -65,51 +53,57 @@ impl Genotype<u8> for QueensBoard {
         QueensBoard(individual)
     }
 
-    // This function returns the maximum score possible (n-1, since in the
-    // worst case n-1 queens must be moved to get a solution) minus the number of
-    // queens that collide with others
+    // This function returns the maximum score possible (n, since in the
+    // worst case n queens collide) minus the number of queens that collide with others
     fn fitness(&self) -> f64 {
         let size = self.0.len();
-        let diags_exceed = size as isize - 1isize;
-        let mut collisions = 0;
-        let mut verticals = Vec::with_capacity(size);
-        let mut diagonals = Vec::with_capacity(size + diags_exceed as usize);
-        let mut inv_diags = Vec::with_capacity(size + diags_exceed as usize);
+        let diags_exceed = size as isize - 1_isize;
+        let mut collisions = Vec::with_capacity(size);
+        let mut verticals: Vec<isize> = Vec::with_capacity(size);
+        let mut diagonals: Vec<isize> = Vec::with_capacity(size + diags_exceed as usize);
+        let mut inv_diags: Vec<isize> = Vec::with_capacity(size + diags_exceed as usize);
         for _i in 0..size {
-            verticals.push(false);
-            diagonals.push(false);
-            inv_diags.push(false);
+            verticals.push(-1);
+            diagonals.push(-1);
+            inv_diags.push(-1);
+            collisions.push(false);
         }
         for _i in 0..diags_exceed as usize {
-            diagonals.push(false);
-            inv_diags.push(false);
+            diagonals.push(-1);
+            inv_diags.push(-1);
         }
 
         for (row, queen) in self.0.iter().enumerate() {
-            let mut collision = if verticals[*queen as usize] { 1 } else { 0 };
-            verticals[*queen as usize] = true;
+            let mut collision = verticals[*queen as usize];
+            if collision > -1 {
+                collisions[row] = true;
+                collisions[collision as usize] = true;
+            }
+            verticals[*queen as usize] = row as isize;
 
             // A collision exists in the diagonal if col-row have the same value
             // for more than one queen
             let diag = ((*queen as isize - row as isize) + diags_exceed) as usize;
-            if diagonals[diag] {
-                collision = 1;
+            collision = diagonals[diag];
+            if collision > -1 {
+                collisions[row] = true;
+                collisions[collision as usize] = true;
             }
-            diagonals[diag] = true;
+            diagonals[diag] = row as isize;
 
             // A collision exists in the inverse diagonal if n-1-col-row have the
             // same value for more than one queen
             let inv_diag =
                 ((diags_exceed - *queen as isize - row as isize) + diags_exceed) as usize;
-            if inv_diags[inv_diag] {
-                collision = 1;
+            collision = inv_diags[inv_diag];
+            if collision > -1 {
+                collisions[row] = true;
+                collisions[collision as usize] = true;
             }
-            inv_diags[inv_diag] = true;
-
-            collisions += collision;
+            inv_diags[inv_diag] = row as isize;
         }
 
-        (size - 1 - collisions) as f64
+        (size - collisions.into_iter().filter(|r| *r).count()) as f64
     }
 
     fn mutate(&mut self, rgen: &mut SmallRng, index: usize) {
@@ -134,7 +128,7 @@ fn bench_generation_run_tournaments_1024inds(b: &mut Bencher) {
     let mut gen_exec = test::black_box(
         GeneticExecution::<u8, QueensBoard>::new()
             .population_size(population_size)
-            .genotype_size(n_queens as u8)
+            .environment(n_queens as u8)
             .select_function(Box::new(SelectionFunctions::Tournaments(NTournaments(
                 population_size / 4,
             ))))
@@ -142,7 +136,7 @@ fn bench_generation_run_tournaments_1024inds(b: &mut Bencher) {
     );
     while gen_exec.population.len() < gen_exec.population_size {
         gen_exec.population.push(IndWithFitness::new(
-            QueensBoard::generate(&gen_exec.genotype_size),
+            QueensBoard::generate(&gen_exec.environment),
             None,
         ));
     }
@@ -161,17 +155,17 @@ fn bench_refitness_none_1024inds(b: &mut Bencher) {
     let mut gen_exec = test::black_box(
         GeneticExecution::<u8, QueensBoard>::new()
             .population_size(population_size)
-            .genotype_size(n_queens as u8),
+            .environment(n_queens as u8),
     );
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
         gen_exec.population.push(IndWithFitness::new(
-            QueensBoard::generate(&gen_exec.genotype_size),
+            QueensBoard::generate(&gen_exec.environment),
             None,
         ));
     }
     b.iter(|| {
-        gen_exec.refitness(1, 0.0, 0);
+        gen_exec.refitness(1, 0);
     });
 }
 
@@ -183,7 +177,7 @@ fn bench_refitness_niches_1024inds(b: &mut Bencher) {
     let mut gen_exec = test::black_box(
         GeneticExecution::<u8, QueensBoard>::new()
             .population_size(population_size)
-            .genotype_size(n_queens as u8)
+            .environment(n_queens as u8)
             .population_refitness_function(Box::new(PopulationRefitnessFunctions::Niches(
                 NichesAlpha(1.0),
                 Box::new(NichesBetaRates::Constant(1.0)),
@@ -193,12 +187,12 @@ fn bench_refitness_niches_1024inds(b: &mut Bencher) {
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
         gen_exec.population.push(IndWithFitness::new(
-            QueensBoard::generate(&gen_exec.genotype_size),
+            QueensBoard::generate(&gen_exec.environment),
             None,
         ));
     }
     b.iter(|| {
-        gen_exec.refitness(1, 0.0, 0);
+        gen_exec.refitness(1, 0);
     });
 }
 
@@ -216,7 +210,7 @@ fn bench_mutation_1024inds(b: &mut Bencher) {
     // Initialize randomly the population
     for _ind in 0..gen_exec.population_size {
         gen_exec.population.push(IndWithFitness::new(
-            QueensBoard::generate(&gen_exec.genotype_size),
+            QueensBoard::generate(&gen_exec.environment),
             None,
         ));
     }
@@ -556,11 +550,39 @@ fn bench_update_progress_1024inds(b: &mut Bencher) {
     }
     gen_exec.compute_fitnesses(true);
     let current_fitnesses = gen_exec.get_fitnesses();
-    let mut last_progresses: Vec<f64> = Vec::new();
-    let last_best = 0_f64;
-    let best = current_fitnesses[0];
+    for _i in 0..gen_exec.stats_generations {
+        gen_exec.stats.values.update(&current_fitnesses);
+    }
     b.iter(|| {
-        GeneticExecution::<u8, QueensBoard>::update_progress(last_best, best, &mut last_progresses);
+        gen_exec.stats.values.update(&current_fitnesses);
+    });
+}
+
+#[bench]
+fn bench_update_progress_and_stats_line_1024inds(b: &mut Bencher) {
+    let n_queens: u8 = test::black_box(255);
+    let log2 = (f64::from(n_queens) * 4_f64).log2().ceil();
+    let population_size = 2_i32.pow(log2 as u32) as usize;
+    let mut gen_exec = test::black_box(
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .environment(n_queens as u8),
+    );
+    // Initialize randomly the population
+    for _ind in 0..gen_exec.population_size {
+        gen_exec.population.push(IndWithFitness::new(
+            QueensBoard::generate(&gen_exec.environment),
+            None,
+        ));
+    }
+    gen_exec.compute_fitnesses(true);
+    let current_fitnesses = gen_exec.get_fitnesses();
+    for _i in 0..gen_exec.stats_generations {
+        gen_exec.stats.values.update(&current_fitnesses);
+    }
+    b.iter(|| {
+        gen_exec.stats.stats_line(0, 0);
+        gen_exec.stats.values.update(&current_fitnesses);
     });
 }
 
