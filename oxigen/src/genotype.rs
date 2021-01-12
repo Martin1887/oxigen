@@ -82,9 +82,6 @@ pub trait Genotype<T: PartialEq>: Display + Clone + Send + Sync {
     }
 
     /// Function to quickly hash the individual for global cache.
-    /// The default implementation is the `to_string()` function but
-    /// another faster function can be implemented if the `Display`
-    /// implementation is slow.
     #[cfg(feature = "global_cache")]
     fn hash(&self) -> Self::GenotypeHash;
 }

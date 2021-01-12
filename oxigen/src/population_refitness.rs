@@ -6,6 +6,7 @@ use niches_beta_rate::*;
 use rayon::prelude::*;
 use std::cmp::PartialEq;
 use IndWithFitness;
+use OxigenStatsValues;
 use PopulationRefitnessFunctions::*;
 
 /// This trait defines the population_refitness function that permits to modify the
@@ -16,6 +17,39 @@ use PopulationRefitnessFunctions::*;
 /// The refitness is done over the original fitness with age effects, but without
 /// taking into account refitnesses of previous generations.
 pub trait PopulationRefitness<T: PartialEq + Send + Sync, G: Genotype<T>>: Send + Sync {
+    /// If `true` refitness check is skipped in all generations,
+    /// otherwise `individual_is_refitnessed` is applied on each
+    /// individual and if that function returns `true` then
+    /// `population_refitness` is called for that individual.
+    fn skip_refitness(&self) -> bool {
+        false
+    }
+
+    /// Function called to determine if the `population_refitness`
+    /// function must be called on the individual.
+    ///
+    /// # Parameters:
+    /// - `individual_index`: The individual index inside the population.
+    /// - `population`: The full population. It includes the individual that is being
+    /// evaluated (`individual_index`) that is probably wanted to be excluded of the
+    /// comparison with population individuals. The `Option<Fitness>` is always
+    /// `Some(Fitness)` when this function is called.
+    /// - `generation`: The current generation.
+    /// - `stats_values`: The statistics of the last generations. This argument is
+    /// not mutable because the function is executed inside a parallel loop.
+    /// - `n_solutions`: The number of found solutions in the last generation.
+    ///
+    /// # Returns
+    /// `true` if `population_refitness` must be called and `false` otherwise.
+    fn individual_is_refitnessed(
+        &self,
+        individual_index: usize,
+        population: &[IndWithFitness<T, G>],
+        generation: u64,
+        stats_values: &OxigenStatsValues,
+        n_solutions: usize,
+    ) -> bool;
+
     /// Modify the individual fitness comparing it with the other individuals in the
     /// population. Called just before age unfitness and survival pressure kill.
     ///
@@ -26,7 +60,8 @@ pub trait PopulationRefitness<T: PartialEq + Send + Sync, G: Genotype<T>>: Send 
     /// comparison with population individuals. The `Option<Fitness>` is always
     /// `Some(Fitness)` when this function is called.
     /// - `generation`: The current generation.
-    /// - `progress`: The progress in the last iterations.
+    /// - `stats_values`: The statistics of the last generations. This argument is
+    /// not mutable because the function is executed inside a parallel loop.
     /// - `n_solutions`: The number of found solutions in the last generation.
     ///
     /// # Returns
@@ -36,7 +71,7 @@ pub trait PopulationRefitness<T: PartialEq + Send + Sync, G: Genotype<T>>: Send 
         individual_index: usize,
         population: &[IndWithFitness<T, G>],
         generation: u64,
-        progress: f64,
+        stats_values: &OxigenStatsValues,
         n_solutions: usize,
     ) -> f64;
 }
@@ -61,12 +96,28 @@ pub enum PopulationRefitnessFunctions {
 impl<T: PartialEq + Send + Sync, G: Genotype<T>> PopulationRefitness<T, G>
     for PopulationRefitnessFunctions
 {
+    fn skip_refitness(&self) -> bool {
+        matches!(self, None)
+    }
+    fn individual_is_refitnessed(
+        &self,
+        _individual_index: usize,
+        _population: &[IndWithFitness<T, G>],
+        _generation: u64,
+        _stats_values: &OxigenStatsValues,
+        _n_solutions: usize,
+    ) -> bool {
+        match self {
+            None => false,
+            Niches(_alfa, _beta, _sigma) => true,
+        }
+    }
     fn population_refitness(
         &self,
         individual_index: usize,
         population: &[IndWithFitness<T, G>],
         generation: u64,
-        progress: f64,
+        stats_values: &OxigenStatsValues,
         n_solutions: usize,
     ) -> f64 {
         match self {
@@ -93,7 +144,7 @@ impl<T: PartialEq + Send + Sync, G: Genotype<T>> PopulationRefitness<T, G>
                         })
                         .sum::<f64>();
                     current_fitness =
-                        current_fitness.powf(beta.rate(generation, progress, n_solutions));
+                        current_fitness.powf(beta.rate(generation, &stats_values, n_solutions));
                     if m == 0.0 {
                         m = f64::EPSILON;
                     }

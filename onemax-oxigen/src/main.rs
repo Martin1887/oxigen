@@ -59,7 +59,7 @@ fn main() {
         .expect("Enter a number bigger than 1");
     let population_size = problem_size * 8;
     let log2 = (f64::from(problem_size as u32) * 4_f64).log2().ceil();
-    let (solutions, generation, _progress, _population) = GeneticExecution::<bool, OneMax>::new()
+    let (solutions, generation, _stats, _population) = GeneticExecution::<bool, OneMax>::new()
         .population_size(population_size)
         .environment(problem_size)
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {

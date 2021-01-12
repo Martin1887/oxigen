@@ -3,12 +3,17 @@
 
 use niches_beta_rate::NichesBetaRates::*;
 use slope_params::SlopeParams;
+use OxigenStatsValues;
 
 /// This trait defines the niches beta rate function used to compute the beta value.
 pub trait NichesBetaRate: Send + Sync {
-    /// Returns the niches beta rate according to the generation, the progress in the
+    /// Return the niches beta rate according to the generation, the statistics in the
     /// last generations, and the number of solutions found.
-    fn rate(&self, generation: u64, progress: f64, n_solutions: usize) -> f64;
+    ///
+    /// The `stats_values` parameter is not mutable because this function is
+    /// executed inside  parallel loop, so many statistics functions calls may
+    /// slow down the execution.
+    fn rate(&self, generation: u64, stats_values: &OxigenStatsValues, n_solutions: usize) -> f64;
 }
 
 /// Provided NichesBetaRate implementations.
@@ -22,7 +27,7 @@ pub enum NichesBetaRates {
 }
 
 impl NichesBetaRate for NichesBetaRates {
-    fn rate(&self, generation: u64, _progress: f64, _n_solutions: usize) -> f64 {
+    fn rate(&self, generation: u64, _stats_values: &OxigenStatsValues, _n_solutions: usize) -> f64 {
         match self {
             Constant(c) => *c,
             Linear(sp) => sp.check_bound(sp.coefficient * generation as f64 + sp.start),

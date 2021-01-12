@@ -2,12 +2,14 @@
 
 // #![feature(test)]
 
-extern crate historian;
 extern crate rand;
 extern crate rayon;
 
-pub mod age;
 // mod benchmarks;
+#[cfg(test)]
+mod tests;
+
+pub mod age;
 pub mod crossover;
 pub mod genotype;
 pub mod mutation_rate;
@@ -17,6 +19,7 @@ pub mod prelude;
 pub mod selection;
 pub mod selection_rate;
 pub mod slope_params;
+pub mod stats;
 pub mod stop_criteria;
 pub mod survival_pressure;
 
@@ -29,12 +32,12 @@ pub use population_refitness::*;
 pub use selection::*;
 pub use selection_rate::*;
 pub use slope_params::*;
+pub use stats::*;
 use std::fmt::Display;
 use std::marker::PhantomData;
 pub use stop_criteria::*;
 pub use survival_pressure::*;
 
-use historian::Histo;
 use rand::distributions::{Standard, Uniform};
 use rand::prelude::*;
 use rayon::prelude::*;
@@ -47,27 +50,6 @@ use std::sync::mpsc::channel;
 const POPULATION_SEPARATOR: &[u8] = b"\n\n\n\n---------------------------------\n\n\n\n";
 const POPULATION_ERR_MSG: &str = "Error writing on population log file";
 const PROGRESS_ERR_MSG: &str = "Error writing in progress log file";
-const PROGRESS_HEADER: &[u8] = b"Generation\t\
-    Solutions\t\
-    Last progress\t\
-    Progress avg\t\
-    Progress std\t\
-    Progress max\t\
-    Progress min\t\
-    Progress p10\t\
-    Progress p25\t\
-    Progress median\t\
-    Progress p75\t\
-    Progress p90\t\
-    Fitness avg\t\
-    Fitness std\t\
-    Fitness max\t\
-    Fitness min\t\
-    Fitness p10\t\
-    Fitness p25\t\
-    Fitness median\t\
-    Fitness p75\t\
-    Fitness p90\n";
 
 /// Struct that defines the fitness of each individual and the related information.
 #[derive(Copy, Clone, Debug)]
@@ -141,11 +123,17 @@ pub struct GeneticExecution<T: PartialEq + Send + Sync, Ind: Genotype<T>> {
     /// equal to a previous individual its fitness is not recomputed. Only valid
     /// if cache_fitness is true.
     global_cache: bool,
-    /// HashMap used for the global cache
+    /// HashMap used for the global cache.
     #[cfg(feature = "global_cache")]
     cache_map: HashMap<Ind::GenotypeHash, f64>,
-    /// Progress log, writes statistics of the population every certain number of generations.
-    progress_log: (u64, Option<File>),
+    /// Stats log, writes statistics of the population every certain number of generations.
+    stats_log: (u64, Option<File>),
+    /// Number of last generations to be taken into account in stats (64 by default).
+    stats_generations: usize,
+    /// Delimiter of the statistics CSV file ("\t" by default).
+    stats_delimiter: String,
+    /// `OxigenStats` object with the statistics options. By default all fields are enabled.
+    stats: OxigenStats,
     /// Population log, writes the population and fitnesses every certain number of generations.
     population_log: (u64, Option<File>),
 }
@@ -168,14 +156,17 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> Default for GeneticExecution<
             global_cache: cfg!(feature = "global_cache"),
             #[cfg(feature = "global_cache")]
             cache_map: HashMap::new(),
-            progress_log: (0, None),
+            stats_log: (0, None),
+            stats_generations: 64,
+            stats_delimiter: String::from("\t"),
+            stats: OxigenStats::new(64, "\t"),
             population_log: (0, None),
         }
     }
 }
 
 impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
-    /// Creates a new default genetic algorithm execution.
+    /// Create a new default genetic algorithm execution.
     pub fn new() -> Self {
         Self::default()
     }
@@ -186,7 +177,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         self
     }
 
-    /// Sets the initial population individuals. If lower individuals
+    /// Set the initial population individuals. If lower individuals
     /// than population_size are received, the rest of population will be
     /// generated randomly.
     pub fn population(mut self, new_pop: Vec<IndWithFitness<T, Ind>>) -> Self {
@@ -194,43 +185,43 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         self
     }
 
-    /// Sets the environment.
+    /// Set the environment.
     pub fn environment(mut self, env: Ind::Environment) -> Self {
         self.environment = env;
         self
     }
 
-    /// Sets the mutation rate.
+    /// Set the mutation rate.
     pub fn mutation_rate(mut self, new_mut: Box<dyn MutationRate>) -> Self {
         self.mutation_rate = new_mut;
         self
     }
 
-    /// Sets the number of tournament stages whose individuals are selected for crossover.
+    /// Set the number of tournament stages whose individuals are selected for crossover.
     pub fn selection_rate(mut self, new_sel_rate: Box<dyn SelectionRate>) -> Self {
         self.selection_rate = new_sel_rate;
         self
     }
 
-    /// Sets the selection function of the genetic algorithm.
+    /// Set the selection function of the genetic algorithm.
     pub fn select_function(mut self, new_sel: Box<dyn Selection>) -> Self {
         self.selection = new_sel;
         self
     }
 
-    /// Sets the age function of the genetic algorithm.
+    /// Set the age function of the genetic algorithm.
     pub fn age_function(mut self, new_age: Box<dyn Age>) -> Self {
         self.age = new_age;
         self
     }
 
-    /// Sets the crossover function of the genetic algorithm.
+    /// Set the crossover function of the genetic algorithm.
     pub fn crossover_function(mut self, new_cross: Box<dyn Crossover<T, Ind>>) -> Self {
         self.crossover = new_cross;
         self
     }
 
-    /// Sets the population refitness function of the genetic algorithm.
+    /// Set the population refitness function of the genetic algorithm.
     pub fn population_refitness_function(
         mut self,
         new_refit: Box<dyn PopulationRefitness<T, Ind>>,
@@ -239,7 +230,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         self
     }
 
-    /// Sets the survival pressure function of the genetic algorithm.
+    /// Set the survival pressure function of the genetic algorithm.
     pub fn survival_pressure_function(
         mut self,
         new_surv: Box<dyn SurvivalPressure<T, Ind>>,
@@ -248,20 +239,21 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         self
     }
 
-    /// Sets the stop criterion of the genetic algorithm.
+    /// Set the stop criterion of the genetic algorithm.
     pub fn stop_criterion(mut self, new_crit: Box<dyn StopCriterion>) -> Self {
         self.stop_criterion = new_crit;
         self
     }
 
-    /// Sets the cache fitness flag.
+    /// Set the cache fitness flag.
     pub fn cache_fitness(mut self, new_cache: bool) -> Self {
         self.cache_fitness = new_cache;
         self
     }
 
-    /// Sets the global cache flag.
-    /// Panics: when trying to put it true without `global_cache` feature enabled.
+    /// Set the global cache flag.
+    ///
+    /// # Panics: when trying to put it true without `global_cache` feature enabled.
     pub fn global_cache(mut self, new_global_cache: bool) -> Self {
         if cfg!(feature = "global_cache") {
             self.global_cache = new_global_cache;
@@ -273,73 +265,109 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         self
     }
 
-    /// Sets the progress log.
-    pub fn progress_log(mut self, generations: u64, log_file: File) -> Self {
-        self.progress_log = (generations, Some(log_file));
+    /// Set the stats log.
+    pub fn stats_log(mut self, generations: u64, log_file: File) -> Self {
+        self.stats_log = (generations, Some(log_file));
         self
     }
 
-    /// Sets the progress log.
+    /// Set the number of generations taken into account for the statistics.
+    pub fn stats_generations(mut self, generations: usize) -> Self {
+        self.stats_generations = generations;
+        self.stats = OxigenStats::new(self.stats_generations, &self.stats_delimiter);
+        self
+    }
+
+    /// Enable a statistics field to print in the statistics log.
+    pub fn stats_enable_field(mut self, field: OxigenStatsFields) -> Self {
+        self.stats.enable(field);
+        self
+    }
+
+    /// Disable a statistics field (not printed in the statistics log).
+    pub fn stats_disable_field(mut self, field: OxigenStatsFields) -> Self {
+        self.stats.disable(field);
+        self
+    }
+
+    /// Set the delimiter for the stats CSV file.
+    pub fn stats_delimiter(mut self, delimiter: String) -> Self {
+        self.stats_delimiter = delimiter;
+        self.stats.set_delimiter(&self.stats_delimiter);
+        self
+    }
+
+    /// Set the population log.
     pub fn population_log(mut self, generations: u64, log_file: File) -> Self {
         self.population_log = (generations, Some(log_file));
         self
     }
 
-    /// Run the genetic algorithm executiion until the `stop_criterion` is satisfied.
+    /// Run the genetic algorithm execution until the `stop_criterion` is satisfied.
     ///
     /// # Returns
     ///
     /// - A vector with the individuals of the population that are solution of the problem.
     /// - The number of generations run.
-    /// - The average progress in the last generations.
+    /// - The statistics in the last generations.
     /// - The entire population in the last generation (useful for resuming the execution).
-    pub fn run(mut self) -> (Vec<Ind>, u64, f64, Vec<IndWithFitness<T, Ind>>) {
+    pub fn run(
+        mut self,
+    ) -> (
+        Vec<Ind>,
+        u64,
+        OxigenStatsValues,
+        Vec<IndWithFitness<T, Ind>>,
+    ) {
         // Initialize randomly the population
         while self.population.len() < self.population_size {
-            self.population.push(IndWithFitness::new(
-                Ind::generate(&self.environment),
-                None,
-            ));
+            self.population
+                .push(IndWithFitness::new(Ind::generate(&self.environment), None));
         }
         self.fix();
         self.compute_fitnesses(true);
 
-        if self.progress_log.0 > 0 {
+        if self.stats_log.0 > 0 {
             self.print_progress_header();
         }
 
-        let (generation, progress, solutions) = self.run_loop();
+        let (generation, solutions) = self.run_loop();
 
-        (solutions, generation, progress, self.population)
+        (solutions, generation, self.stats.values, self.population)
     }
 
-    fn run_loop(&mut self) -> (u64, f64, Vec<Ind>) {
+    fn run_loop(&mut self) -> (u64, Vec<Ind>) {
         let mut generation: u64 = 0;
-        let mut last_progresses: Vec<f64> = Vec::new();
-        let mut progress: f64 = std::f64::NAN;
         // A HashSet is not used to not force to implement Hash in Genotype
         let mut solutions: Vec<Ind> = Vec::new();
         let mut mutation_rate;
         let mut selection_rate;
-        let mut last_best = 0f64;
 
         let mut current_fitnesses = self.get_fitnesses();
-        self.get_solutions(&mut solutions);
-        while !self
-            .stop_criterion
-            .stop(generation, progress, solutions.len(), &current_fitnesses)
-        {
+
+        while !self.stop_criterion.stop(
+            generation,
+            &mut self.stats.values,
+            solutions.len(),
+            &current_fitnesses,
+        ) {
             generation += 1;
 
-            mutation_rate =
-                self.mutation_rate
-                    .rate(generation, progress, solutions.len(), &current_fitnesses);
-            selection_rate =
-                self.selection_rate
-                    .rate(generation, progress, solutions.len(), &current_fitnesses);
+            mutation_rate = self.mutation_rate.rate(
+                generation,
+                &mut self.stats.values,
+                solutions.len(),
+                &current_fitnesses,
+            );
+            selection_rate = self.selection_rate.rate(
+                generation,
+                &mut self.stats.values,
+                solutions.len(),
+                &current_fitnesses,
+            );
 
             self.compute_fitnesses(true);
-            self.refitness(generation, progress, solutions.len());
+            self.refitness(generation, solutions.len());
             current_fitnesses = self.get_fitnesses();
             let selected = self.selection.select(&current_fitnesses, selection_rate);
             let parents_children = self.cross(&selected);
@@ -349,19 +377,17 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             self.mutate(mutation_rate);
             self.fix();
             self.compute_fitnesses(false);
-            self.refitness(generation, progress, solutions.len());
+            self.refitness(generation, solutions.len());
             self.age_unfitness();
             // get solutions before kill
             self.get_solutions(&mut solutions);
             self.survival_pressure_kill(&parents_children);
 
             current_fitnesses = self.get_fitnesses();
-            let best = current_fitnesses[0];
-            progress = Self::update_progress(last_best, best, &mut last_progresses);
-            last_best = best;
+            self.stats.values.update(&current_fitnesses);
 
-            if self.progress_log.0 > 0 && generation % self.progress_log.0 == 0 {
-                self.print_progress(generation, progress, &last_progresses, solutions.len());
+            if self.stats_log.0 > 0 && generation % self.stats_log.0 == 0 {
+                self.print_progress(generation, solutions.len());
             }
             if self.population_log.0 > 0 && generation % self.population_log.0 == 0 {
                 self.print_population(generation);
@@ -370,7 +396,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             self.update_age();
         }
 
-        (generation, progress, solutions)
+        (generation, solutions)
     }
 
     fn print_population(&mut self, generation: u64) {
@@ -397,86 +423,17 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     }
 
     fn print_progress_header(&mut self) {
-        if let Some(ref mut f) = self.progress_log.1 {
-            f.write_all(PROGRESS_HEADER).expect(PROGRESS_ERR_MSG);
+        if let Some(ref mut f) = self.stats_log.1 {
+            f.write_all(format!("{}\n", self.stats.header()).as_bytes())
+                .expect(PROGRESS_ERR_MSG);
         }
     }
 
-    fn print_progress(
-        &mut self,
-        generation: u64,
-        progress: f64,
-        last_progresses: &[f64],
-        n_solutions: usize,
-    ) {
-        let current_fitnesses = self.get_fitnesses();
-        if let Some(ref mut f) = self.progress_log.1 {
-            let progress_hist = Histo::default();
-            for prog in last_progresses.iter() {
-                progress_hist.measure(*prog);
-            }
-            let fit_hist = Histo::default();
-            for fit in &current_fitnesses {
-                fit_hist.measure(*fit);
-            }
-            let fitness_avg =
-                current_fitnesses.iter().sum::<f64>() / current_fitnesses.len() as f64;
-            f.write_all(
-                format!(
-                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
-                    generation,
-                    n_solutions,
-                    last_progresses[last_progresses.len() - 1],
-                    progress,
-                    (1_f64 / (last_progresses.len() - 1) as f64)
-                        * last_progresses
-                            .iter()
-                            .fold(0_f64, |acc, x| acc + (x - progress).powi(2))
-                            .sqrt(),
-                    last_progresses
-                        .iter()
-                        .max_by(|x, y| x.partial_cmp(&y).unwrap())
-                        .unwrap(),
-                    last_progresses
-                        .iter()
-                        .min_by(|x, y| x.partial_cmp(&y).unwrap())
-                        .unwrap(),
-                    progress_hist.percentile(10_f64),
-                    progress_hist.percentile(25_f64),
-                    progress_hist.percentile(50_f64),
-                    progress_hist.percentile(75_f64),
-                    progress_hist.percentile(90_f64),
-                    fitness_avg,
-                    (1_f64 / (current_fitnesses.len() - 1) as f64)
-                        * current_fitnesses
-                            .iter()
-                            .fold(0_f64, |acc, x| acc + (x - fitness_avg).powi(2))
-                            .sqrt(),
-                    current_fitnesses
-                        .iter()
-                        .max_by(|x, y| x.partial_cmp(&y).unwrap())
-                        .unwrap(),
-                    current_fitnesses
-                        .iter()
-                        .min_by(|x, y| x.partial_cmp(&y).unwrap())
-                        .unwrap(),
-                    fit_hist.percentile(10_f64),
-                    fit_hist.percentile(25_f64),
-                    fit_hist.percentile(50_f64),
-                    fit_hist.percentile(75_f64),
-                    fit_hist.percentile(90_f64),
-                ).as_bytes(),
-            ).expect(PROGRESS_ERR_MSG);
+    fn print_progress(&mut self, generation: u64, n_solutions: usize) {
+        if let Some(ref mut f) = self.stats_log.1 {
+            f.write_all(format!("{}\n", self.stats.stats_line(generation, n_solutions)).as_bytes())
+                .expect(PROGRESS_ERR_MSG);
         }
-    }
-
-    fn update_progress(last_best: f64, best: f64, last_progresses: &mut Vec<f64>) -> f64 {
-        last_progresses.push(best - last_best);
-        if last_progresses.len() == 16 {
-            last_progresses.remove(0);
-        }
-
-        last_progresses.par_iter().sum::<f64>() / last_progresses.len() as f64
     }
 
     fn fix(&mut self) {
@@ -675,38 +632,45 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         });
     }
 
-    fn refitness(&mut self, generation: u64, progress: f64, n_solutions: usize) {
-        let (sender, receiver) = channel();
+    fn refitness(&mut self, generation: u64, n_solutions: usize) {
+        if !self.population_refitness.skip_refitness() {
+            let (sender, receiver) = channel();
 
-        self.population
-            .par_iter()
-            .enumerate()
-            .for_each_with(sender, |s, (i, indwf)| {
-                if let Some(fit) = indwf.fitness {
-                    let new_fit = self.population_refitness.population_refitness(
-                        i,
-                        &self.population,
-                        generation,
-                        progress,
-                        n_solutions,
-                    );
-                    if (new_fit - fit.fitness).abs() > 0.000_001 {
-                        s.send((
+            self.population
+                .par_iter()
+                .enumerate()
+                .for_each_with(sender, |s, (i, indwf)| {
+                    if let Some(fit) = indwf.fitness {
+                        if self.population_refitness.individual_is_refitnessed(
                             i,
-                            Some(Fitness {
-                                fitness: new_fit,
-                                age: fit.age,
-                                original_fitness: fit.original_fitness,
-                                age_effect: fit.age_effect,
-                                refitness_effect: new_fit - fit.fitness,
-                            }),
-                        ))
-                        .unwrap()
+                            &self.population,
+                            generation,
+                            &self.stats.values,
+                            n_solutions,
+                        ) {
+                            let new_fit = self.population_refitness.population_refitness(
+                                i,
+                                &self.population,
+                                generation,
+                                &self.stats.values,
+                                n_solutions,
+                            );
+                            if (new_fit - fit.fitness).abs() > 0.000_001 {
+                                s.send((
+                                    i,
+                                    Some(Fitness {
+                                        fitness: new_fit,
+                                        ..fit
+                                    }),
+                                ))
+                                .unwrap()
+                            }
+                        }
                     }
-                }
-            });
-        for (i, fit) in receiver {
-            self.population[i].fitness = fit;
+                });
+            for (i, fit) in receiver {
+                self.population[i].fitness = fit;
+            }
         }
     }
 

@@ -66,20 +66,20 @@ impl<'a> Display for FdParams<'a> {
             if self.genes[1] - 1 % 8 >= 4 {
                 s.push_str("use_general_costs=false,");
             }
-            if self.genes[1] - 1 >= 48 {
+            if self.genes[1] > 48 {
                 s.push_str("pick=MAX_HADD,");
-            } else if self.genes[1] - 1 >= 40 {
+            } else if self.genes[1] > 40 {
                 s.push_str("pick=MIN_HADD,");
-            } else if self.genes[1] - 1 >= 32 {
+            } else if self.genes[1] > 32 {
                 s.push_str("pick=MIN_REFINED,");
-            } else if self.genes[1] - 1 >= 24 {
+            } else if self.genes[1] > 24 {
                 s.push_str("pick=MAX_UNWANTED,");
-            } else if self.genes[1] - 1 >= 16 {
+            } else if self.genes[1] > 16 {
                 s.push_str("pick=MIN_UNWANTED,");
-            } else if self.genes[1] - 1 >= 8 {
+            } else if self.genes[1] > 8 {
                 s.push_str("pick=RANDOM,");
             }
-            if s.ends_with(",") {
+            if s.ends_with(',') {
                 s.pop();
             }
             s.push_str("),")
@@ -127,10 +127,10 @@ impl<'a> Display for FdParams<'a> {
             if self.genes[4] - 1 % 16 >= 8 {
                 s.push_str("pref=true,");
             }
-            if self.genes[4] - 1 >= 16 {
+            if self.genes[4] > 16 {
                 s.push_str("alm=false,");
             }
-            if s.ends_with(",") {
+            if s.ends_with(',') {
                 s.pop();
             }
             s.push_str("),")
@@ -156,7 +156,7 @@ impl<'a> Display for FdParams<'a> {
                 4 => s.push_str("transform=adapt_costs(cost_type=PLUSONE)"),
                 _ => {}
             }
-            if s.ends_with(",") {
+            if s.ends_with(',') {
                 s.pop();
             }
             s.push_str("),")
@@ -195,7 +195,7 @@ impl<'a> Display for FdParams<'a> {
             _ => {}
         }
 
-        if s.ends_with(",") {
+        if s.ends_with(',') {
             s.pop();
         }
         s.push_str("]))");
@@ -226,7 +226,7 @@ impl<'a> FdParams<'a> {
             0
         } else {
             let n = Self::n_options_without_zero(index);
-            rgen.sample(Uniform::from(0..n)) + 1 as u8
+            rgen.sample(Uniform::from(0..n)) + 1_u8
         }
     }
 
@@ -245,7 +245,7 @@ impl<'a> FdParams<'a> {
         // conflicts with concurrent executions
         let sas_file = format!(
             "output_{}_{}.sas",
-            problem_path.split("/").last().unwrap(),
+            problem_path.split('/').last().unwrap(),
             hash
         );
 
@@ -255,7 +255,7 @@ impl<'a> FdParams<'a> {
         while ((status_code != 0 && status_code <= 22) || status_code > 24) && reruns <= 3 {
             before_time = Instant::now();
             // The command may fail because exceeding time limit, ignore it
-            match Command::new("python3")
+            if let Ok(out) = Command::new("python3")
                 .arg(fd_path)
                 .arg("--sas-file")
                 .arg(&sas_file)
@@ -267,10 +267,7 @@ impl<'a> FdParams<'a> {
                 .arg(search_arguments)
                 .output()
             {
-                Ok(out) => {
-                    status_code = out.status.code().unwrap_or(247);
-                }
-                Err(_) => {}
+                status_code = out.status.code().unwrap_or(247);
             };
             fs::remove_file(&sas_file).ok();
             if (status_code != 0 && status_code <= 22) || status_code > 24 {
@@ -287,7 +284,7 @@ impl<'a> FdParams<'a> {
 }
 
 impl<'a> Genotype<u8> for FdParams<'a> {
-    // The path to the fast-downard.py and the folder with domains and problems
+    // The path to the fast-downward.py and the folder with domains and problems
     // A instance of a default hasher is used too to hash the genes as SAS filenames.
     type Environment = &'a [&'a str];
     type GenotypeHash = Self;
@@ -303,7 +300,7 @@ impl<'a> Genotype<u8> for FdParams<'a> {
     }
 
     fn generate(size: &Self::Environment) -> Self {
-        let mut individual = Vec::with_capacity(8 as usize);
+        let mut individual = Vec::with_capacity(8_usize);
         let mut rgen = SmallRng::from_entropy();
         for i in 0..11 {
             individual.push(Self::random_value(&mut rgen, i));
@@ -318,6 +315,7 @@ impl<'a> Genotype<u8> for FdParams<'a> {
     // The negative value of the sum of execution time of the used benchmarks.
     fn fitness(&self) -> f64 {
         // Zero heuristic is not allowed, minimum heuristic value
+        #[allow(clippy::naive_bytecount)]
         if self.genes.iter().filter(|x| **x == 0).count() == self.genes.len() {
             return -10_000_000.0;
         }
@@ -401,7 +399,7 @@ fn main() {
             .expect("Missing first argument"),
         matches
             .value_of("domains_and_problems_dir_path")
-            .expect("Missnig second argument"),
+            .expect("Missing second argument"),
     ];
     let logs_dir = matches
         .value_of("progress_and_population_log_dir_path")
@@ -410,9 +408,9 @@ fn main() {
         .expect("Error creating progress log file");
     let population_log = File::create(format!("{}/population.txt", logs_dir))
         .expect("Error creating population log file");
-    let population_size = 128 as usize;
+    let population_size = 128_usize;
 
-    let (_solutions, generation, progress, _population) = GeneticExecution::<u8, FdParams>::new()
+    let (_solutions, generation, mut stats, _population) = GeneticExecution::<u8, FdParams>::new()
         .population_size(population_size)
         .environment(&fd_params)
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
@@ -435,12 +433,13 @@ fn main() {
             )),
         ))
         .stop_criterion(Box::new(StopCriteria::Generation(1_000_000)))
-        .progress_log(1, progress_log)
+        .stats_log(1, progress_log)
         .population_log(10, population_log)
         .run();
 
     println!(
-        "Finished in the generation {} with a progress of {}",
-        generation, progress
+        "Finished in the generation {} with an average progress of {}",
+        generation,
+        OxigenStatsFields::AvgProgressAvg.function()(&mut stats)
     );
 }

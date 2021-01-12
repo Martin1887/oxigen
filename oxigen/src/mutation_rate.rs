@@ -2,15 +2,19 @@
 
 use mutation_rate::MutationRates::*;
 use slope_params::SlopeParams;
+use OxigenStatsValues;
 
 /// This trait defines the mutation rate function used to modify the mutation rate.
 pub trait MutationRate: Send + Sync {
-    /// Returns the mutation rate according to the generation, the progress in the
+    /// Return the mutation rate according to the generation, the statistics in the
     /// last generations, the fitnesses of the population and the number of solutions found.
+    ///
+    /// The `stats_values` parameter is mutable because it contains cached values that
+    /// can be modified by `::stats` module, but it should not be manually modified.
     fn rate(
         &self,
         generation: u64,
-        progress: f64,
+        stats_values: &mut OxigenStatsValues,
         n_solutions: usize,
         population_fitness: &[f64],
     ) -> f64;
@@ -30,7 +34,7 @@ impl MutationRate for MutationRates {
     fn rate(
         &self,
         generation: u64,
-        _progress: f64,
+        _stats_values: &mut OxigenStatsValues,
         _n_solutions: usize,
         _population_fitness: &[f64],
     ) -> f64 {

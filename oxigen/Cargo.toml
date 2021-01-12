@@ -1,6 +1,6 @@
 [package]
 name = "oxigen"
-version = "2.2.0"
+version = "3.0.0"
 authors = ["Martin1887 <marcos.martin.pozo.delgado@gmail.com>"]
 description = "Fast, parallel, extensible and adaptable genetic algorithm library."
 repository = "https://github.com/Martin1887/oxigen"
@@ -10,7 +10,6 @@ license = "MPL-2.0"
 categories = ["algorithms", "science"]
 
 [dependencies]
-historian = "4"
 rand = {"version" = "0.7", "features" = ["small_rng"]}
 rayon = "1"
 

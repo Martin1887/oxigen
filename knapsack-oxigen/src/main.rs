@@ -184,7 +184,7 @@ fn main() {
             },
         ];
     }
-    let (solutions, generation, progress, _population) = GeneticExecution::<bool, Knapsack>::new()
+    let (solutions, generation, mut stats, _population) = GeneticExecution::<bool, Knapsack>::new()
         .population_size(population_size)
         .environment((capacity, &items))
         .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
@@ -211,14 +211,17 @@ fn main() {
         .survival_pressure_function(Box::new(
             SurvivalPressureFunctions::CompetitiveOverpopulation(M::new(48, 32, 64)),
         ))
-        .progress_log(100, progress_log)
+        .stats_log(100, progress_log)
         .population_log(500, population_log)
-        .stop_criterion(Box::new(StopCriteria::GenerationAndProgress(1000, 0.0001)))
+        .stop_criterion(Box::new(StopCriteria::GenerationAndAvgProgress(
+            1000, 0.0001,
+        )))
         .run();
 
     println!(
-        "Finished in the generation {} with a progress of {}",
-        generation, progress
+        "Finished in the generation {} with an average progress of {}",
+        generation,
+        OxigenStatsFields::AvgProgressAvg.function()(&mut stats)
     );
     for sol in &solutions {
         println!("{}", sol);

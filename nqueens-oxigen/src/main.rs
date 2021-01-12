@@ -132,52 +132,54 @@ fn main() {
         population_size *= 2;
     }
 
-    let (solutions, generation, progress, _population) = GeneticExecution::<u8, QueensBoard>::new()
-        .population_size(population_size)
-        .environment(n_queens as u8)
-        .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
-            start: f64::from(n_queens) / (2_f64 + 4_f64 * log2) / 100_f64,
-            bound: 0.005,
-            coefficient: -0.00002,
-        })))
-        .selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
-            start: 3_f64,
-            bound: 6_f64,
-            coefficient: 0.05,
-        })))
-        .select_function(Box::new(SelectionFunctions::Tournaments(NTournaments(
-            population_size / 2,
-        ))))
-        .crossover_function(Box::new(CrossoverFunctions::UniformCross))
-        .population_refitness_function(Box::new(PopulationRefitnessFunctions::Niches(
-            NichesAlpha(0.8),
-            Box::new(NichesBetaRates::Linear(SlopeParams {
-                start: 0.0025,
-                bound: 10.0_f64.min(log2 * log2 / 6.0),
-                coefficient: 0.000001 * log2 * log2,
-            })),
-            NichesSigma(0.6),
-        )))
-        // Fighting to parents works but the evolution is slower with many queens
-        /*
-        .survival_pressure_function(Box::new(
-            SurvivalPressureFunctions::ChildrenFightParentsAndTheRestWorst,
-        ))*/
-        .survival_pressure_function(Box::new(SurvivalPressureFunctions::Worst))
-        .age_function(Box::new(AgeFunctions::Linear(
-            AgeThreshold(5),
-            AgeSlope(0.5),
-        )))
-        .stop_criterion(Box::new(StopCriteria::SolutionsFound(
-            4.min(n_queens as usize / 2),
-        )))
-        .progress_log(2_000, progress_log)
-        .population_log(2_000, population_log)
-        .run();
+    let (solutions, generation, mut stats, _population) =
+        GeneticExecution::<u8, QueensBoard>::new()
+            .population_size(population_size)
+            .environment(n_queens as u8)
+            .mutation_rate(Box::new(MutationRates::Linear(SlopeParams {
+                start: f64::from(n_queens) / (2_f64 + 4_f64 * log2) / 100_f64,
+                bound: 0.005,
+                coefficient: -0.00002,
+            })))
+            .selection_rate(Box::new(SelectionRates::Linear(SlopeParams {
+                start: 3_f64,
+                bound: 6_f64,
+                coefficient: 0.05,
+            })))
+            .select_function(Box::new(SelectionFunctions::Tournaments(NTournaments(
+                population_size / 2,
+            ))))
+            .crossover_function(Box::new(CrossoverFunctions::UniformCross))
+            .population_refitness_function(Box::new(PopulationRefitnessFunctions::Niches(
+                NichesAlpha(0.8),
+                Box::new(NichesBetaRates::Linear(SlopeParams {
+                    start: 0.0025,
+                    bound: 10.0_f64.min(log2 * log2 / 6.0),
+                    coefficient: 0.000001 * log2 * log2,
+                })),
+                NichesSigma(0.6),
+            )))
+            // Fighting to parents works but the evolution is slower with many queens
+            /*
+            .survival_pressure_function(Box::new(
+                SurvivalPressureFunctions::ChildrenFightParentsAndTheRestWorst,
+            ))*/
+            .survival_pressure_function(Box::new(SurvivalPressureFunctions::Worst))
+            .age_function(Box::new(AgeFunctions::Linear(
+                AgeThreshold(5),
+                AgeSlope(0.5),
+            )))
+            .stop_criterion(Box::new(StopCriteria::SolutionsFound(
+                4.min(n_queens as usize / 2),
+            )))
+            .stats_log(2_000, progress_log)
+            .population_log(2_000, population_log)
+            .run();
 
     println!(
-        "Finished in the generation {} with a progress of {}",
-        generation, progress
+        "Finished in the generation {} with an average progress of {}",
+        generation,
+        OxigenStatsFields::AvgProgressAvg.function()(&mut stats)
     );
     for sol in &solutions {
         println!("{}", sol);
