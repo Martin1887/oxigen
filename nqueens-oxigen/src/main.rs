@@ -117,6 +117,23 @@ impl Genotype<u8> for QueensBoard {
     }
 }
 
+// Example of custom stats field: Avg progress max - min
+struct AvgProgressMaxMinusMin;
+impl OxigenStatsFieldFunction for AvgProgressMaxMinusMin {
+    fn function(&self) -> &dyn Fn(&mut OxigenStatsValues) -> f64 {
+        &|mut stats: &mut OxigenStatsValues| {
+            OxigenStatsFields::AvgProgressMax.function()(&mut stats)
+                - OxigenStatsFields::AvgProgressMin.function()(&mut stats)
+        }
+    }
+    fn uncached_function(&self) -> &dyn Fn(&OxigenStatsValues) -> f64 {
+        &|stats: &OxigenStatsValues| {
+            OxigenStatsFields::AvgProgressMax.uncached_function()(&stats)
+                - OxigenStatsFields::AvgProgressMin.uncached_function()(&stats)
+        }
+    }
+}
+
 fn main() {
     let n_queens: u8 = std::env::args()
         .nth(1)
@@ -174,6 +191,8 @@ fn main() {
             )))
             .stats_log(2_000, progress_log)
             .population_log(2_000, population_log)
+            // Add example custom stats field: Avg progress max - min
+            .stats_add_custom_field("Avg progress max-min", Box::new(AvgProgressMaxMinusMin))
             .run();
 
     println!(

@@ -676,11 +676,23 @@ impl OxigenStats {
         }
     }
 
-    pub(crate) fn enable(&mut self, field: OxigenStatsFields) -> &mut Self {
+    pub(crate) fn add_field(
+        &mut self,
+        name: &str,
+        field: Box<dyn OxigenStatsFieldFunction>,
+    ) -> &mut Self {
+        self.schema.fields.push(OxigenStatsInstantiatedField {
+            name: String::from(name),
+            enabled: true,
+            field,
+        });
+        self
+    }
+    pub(crate) fn enable_field(&mut self, field: OxigenStatsFields) -> &mut Self {
         self.schema.fields[field as usize].enabled = true;
         self
     }
-    pub(crate) fn disable(&mut self, field: OxigenStatsFields) -> &mut Self {
+    pub(crate) fn disable_field(&mut self, field: OxigenStatsFields) -> &mut Self {
         self.schema.fields[field as usize].enabled = false;
         self
     }
@@ -742,157 +754,215 @@ impl OxigenStatsSchema {
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Generation"),
             enabled: true,
-            field: OxigenStatsAllFields::Generation,
+            field: Box::new(OxigenStatsAllFields::Generation),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Solutions"),
             enabled: true,
-            field: OxigenStatsAllFields::Solutions,
+            field: Box::new(OxigenStatsAllFields::Solutions),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Best last progress"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::BestLastProgress),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::BestLastProgress,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Best progress average"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::BestProgressAvg),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::BestProgressAvg,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Best progress std"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::BestProgressStd),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::BestProgressStd,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Best progress max"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::BestProgressMax),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::BestProgressMax,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Best progress min"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::BestProgressMin),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::BestProgressMin,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Best progress p10"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::BestProgressP10),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::BestProgressP10,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Best progress p25"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::BestProgressP25),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::BestProgressP25,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Best progress median"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::BestProgressMedian),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::BestProgressMedian,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Best progress p75"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::BestProgressP75),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::BestProgressP75,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Best progress p90"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::BestProgressP90),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::BestProgressP90,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Fitness avg"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::FitnessAvg),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::FitnessAvg,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Fitness std"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::FitnessStd),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::FitnessStd,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Fitness max"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::FitnessMax),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::FitnessMax,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Fitness min"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::FitnessMin),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::FitnessMin,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Fitness p10"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::FitnessP10),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::FitnessP10,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Fitness p25"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::FitnessP25),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::FitnessP25,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Fitness median"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::FitnessMedian),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::FitnessMedian,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Fitness p75"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::FitnessP75),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::FitnessP75,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Fitness p90"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::FitnessP90),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::FitnessP90,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Avg last progress"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::AvgLastProgress),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::AvgLastProgress,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Avg progress average"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::AvgProgressAvg),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::AvgProgressAvg,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Avg progress std"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::AvgProgressStd),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::AvgProgressStd,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Avg progress max"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::AvgProgressMax),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::AvgProgressMax,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Avg progress min"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::AvgProgressMin),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::AvgProgressMin,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Avg progress p10"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::AvgProgressP10),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::AvgProgressP10,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Avg progress p25"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::AvgProgressP25),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::AvgProgressP25,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Avg progress median"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::AvgProgressMedian),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::AvgProgressMedian,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Avg progress p75"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::AvgProgressP75),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::AvgProgressP75,
+            )),
         });
         schema.fields.push(OxigenStatsInstantiatedField {
             name: String::from("Avg progress p90"),
             enabled: true,
-            field: OxigenStatsAllFields::StatsField(OxigenStatsFields::AvgProgressP90),
+            field: Box::new(OxigenStatsAllFields::StatsField(
+                OxigenStatsFields::AvgProgressP90,
+            )),
         });
 
         schema
@@ -904,7 +974,7 @@ impl OxigenStatsSchema {
 struct OxigenStatsInstantiatedField {
     name: String,
     enabled: bool,
-    field: OxigenStatsAllFields,
+    field: Box<dyn OxigenStatsFieldFunction>,
 }
 
 /// Private struct containing the stats fields plus generation and solutions.
@@ -924,10 +994,17 @@ impl OxigenStatsAllFields {
     fn count() -> usize {
         31
     }
-
+}
+impl OxigenStatsFieldFunction for OxigenStatsAllFields {
     fn function(&self) -> &dyn Fn(&mut OxigenStatsValues) -> f64 {
         match self {
             OxigenStatsAllFields::StatsField(field) => field.function(),
+            _ => panic!("The function cannot be applied over generation or solutions!"),
+        }
+    }
+    fn uncached_function(&self) -> &dyn Fn(&OxigenStatsValues) -> f64 {
+        match self {
+            OxigenStatsAllFields::StatsField(field) => field.uncached_function(),
             _ => panic!("The function cannot be applied over generation or solutions!"),
         }
     }

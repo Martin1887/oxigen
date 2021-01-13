@@ -278,15 +278,25 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
         self
     }
 
+    /// Add a custom statistics field to print in the statistics log.
+    pub fn stats_add_custom_field(
+        mut self,
+        name: &str,
+        field: Box<dyn OxigenStatsFieldFunction>,
+    ) -> Self {
+        self.stats.add_field(name, field);
+        self
+    }
+
     /// Enable a statistics field to print in the statistics log.
     pub fn stats_enable_field(mut self, field: OxigenStatsFields) -> Self {
-        self.stats.enable(field);
+        self.stats.enable_field(field);
         self
     }
 
     /// Disable a statistics field (not printed in the statistics log).
     pub fn stats_disable_field(mut self, field: OxigenStatsFields) -> Self {
-        self.stats.disable(field);
+        self.stats.disable_field(field);
         self
     }
 
