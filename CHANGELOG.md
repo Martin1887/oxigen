@@ -6,11 +6,17 @@
 - Historical of solutions instead of checking only the current generation.
 - Improve performance of getting fitnesses and solutions using a normal iterator instead of a parallel one.
 
+### 2.1.2 - 2020/01/13
+- Better implementation of niches when m is 0.
+
 ### 2.1.1 - 2021/01/09
 - Fix niches formula: `1.0 - (d / sigma.0).powf(alfa.0)` instead of `(1.0 - (d / sigma.0)).powf(alfa.0)`.
 
 ## 2.1.0 - 2020/01/19
 - Optional global cache as `global_cache` feature.
+
+### 2.0.4 - 2020/01/13
+- Better implementation of niches when m is 0.
 
 ### 2.0.3 - 2021/01/09
 - Fix niches formula: `1.0 - (d / sigma.0).powf(alfa.0)` instead of `(1.0 - (d / sigma.0)).powf(alfa.0)`.
