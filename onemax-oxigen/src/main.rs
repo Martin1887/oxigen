@@ -18,6 +18,9 @@ impl Display for OneMax {
 
 impl Genotype<bool> for OneMax {
     type ProblemSize = usize;
+    type GenotypeHash = bool;
+
+    fn hash(&self) -> bool { unimplemented!() }
 
     fn iter(&self) -> std::slice::Iter<bool> {
         self.0.iter()

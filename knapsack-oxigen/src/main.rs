@@ -51,6 +51,7 @@ impl<'a> Debug for Knapsack<'a> {
 
 impl<'a> Genotype<bool> for Knapsack<'a> {
     type ProblemSize = (f64, &'a [Item]);
+    type GenotypeHash = bool;
 
     fn iter(&self) -> std::slice::Iter<bool> {
         self.items.iter()
@@ -129,6 +130,8 @@ impl<'a> Genotype<bool> for Knapsack<'a> {
         }
         changed
     }
+
+    fn hash(&self) -> bool { unimplemented!() }
 }
 
 fn main() {
