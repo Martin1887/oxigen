@@ -252,7 +252,7 @@ Pozo, M.M. "Oxigen: Fast, parallel, extensible and adaptable genetic algorithm l
 ```tex
 @misc{
   title={Oxigen: Fast, parallel, extensible and adaptable genetic algorithm library written in Rust},
-  author={Pozo M.M.},
+  author={Pozo, Martín},
   howpublised = "\url{https://github.com/Martin1887/oxigen}"
 }
 ```
