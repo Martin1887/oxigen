@@ -33,7 +33,7 @@ In your `Cargo.toml` file add the `oxigen` dependency:
 
 ```
 [dependencies]
-oxigen = "^1.4.1"
+oxigen = "^1.5"
 ```
 
 To use `oxigen` `use oxigen::prelude::*` and call the `run` method over a `GeneticExecution` instance overwriting the default hyperparameters and functions folllowing your needs:
@@ -225,7 +225,7 @@ Pozo, M.M. "Oxigen: Fast, parallel, extensible and adaptable genetic algorithm l
 ```tex
 @misc{
   title={Oxigen: Fast, parallel, extensible and adaptable genetic algorithm library written in Rust},
-  author={Pozo M.M.},
+  author={Pozo, Martín},
   howpublised = "\url{https://github.com/Martin1887/oxigen}"
 }
 ```
