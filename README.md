@@ -170,6 +170,8 @@ To build oxigen, use `cargo` like for any Rust project:
 * `cargo build` to build in debug mode.
 * `cargo build --release` to build with optimizations.
 
+Due to a bug in cargo workspaces with optional features errors appear building from the root folder (see #12, #19), but building inside each project works flawlessly.
+
 To run benchmarks, you will need a nightly Rust compiler. Uncomment the lines `// #![feature(test)]` and `// mod benchmarks;` from `lib.rs` and then benchmarks can be run using `cargo bench --jobs 1 --all-features`.
 
 
