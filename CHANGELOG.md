@@ -1,10 +1,17 @@
 # Oxigen Changelog
 
+### 2.2.1 - 2021/02/27
+- Fix uniform cross function with different length individuals.
+
 ## 2.2.0 - 2021/01/09
 - Better population refitness taking into account the age effect but not the refitness of previous generations (in previous versions the original fitness was taken instead).
 - Fix niches formula: `1.0 - (d / sigma.0).powf(alfa.0)` instead of `(1.0 - (d / sigma.0)).powf(alfa.0)`.
 - Historical of solutions instead of checking only the current generation.
 - Improve performance of getting fitnesses and solutions using a normal iterator instead of a parallel one.
+
+
+### 2.1.3 - 2021/02/27
+- Fix uniform cross function with different length individuals.
 
 ### 2.1.2 - 2020/01/13
 - Better implementation of niches when m is 0.
@@ -14,6 +21,9 @@
 
 ## 2.1.0 - 2020/01/19
 - Optional global cache as `global_cache` feature.
+
+### 2.0.5 - 2021/02/27
+- Fix uniform cross function with different length individuals.
 
 ### 2.0.4 - 2020/01/13
 - Better implementation of niches when m is 0.
@@ -38,6 +48,9 @@
 - Many `SurvivalPressure` built-in functions have been added, like `Overpopulation`, `CompetitiveOverpopulation`, `DeterministicOverpopulation`, `ChildrenFightParents`, `ChildrenFightMostSimilar`, etc.
 - The two previous additions allow to search different solutions in different search space areas in order to avoid local suboptimal solutions and find different solutions.
 - Other minor improvements.
+
+### 1.5.1 - 2021/02/27
+- Fix uniform cross function with different length individuals.
 
 ## 1.5.0 - 2019/08/24
 - Multipoint and uniform cross functions.
