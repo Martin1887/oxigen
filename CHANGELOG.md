@@ -1,5 +1,9 @@
 # Oxigen Changelog
 
+### 2.2.2 - 2021/02/28
+- Special case for single crosspoint and multicrosspoint with individuals of length 1 interchanging it with a random position of the other individual.
+- Interchange random positions in uniform cross instead of always even ones.
+
 ### 2.2.1 - 2021/02/27
 - Fix uniform cross function with different length individuals.
 
@@ -9,6 +13,9 @@
 - Historical of solutions instead of checking only the current generation.
 - Improve performance of getting fitnesses and solutions using a normal iterator instead of a parallel one.
 
+### 2.1.4 - 2021/02/28
+- Special case for single crosspoint and multicrosspoint with individuals of length 1 interchanging it with a random position of the other individual.
+- Interchange random positions in uniform cross instead of always even ones.
 
 ### 2.1.3 - 2021/02/27
 - Fix uniform cross function with different length individuals.
@@ -21,6 +28,10 @@
 
 ## 2.1.0 - 2020/01/19
 - Optional global cache as `global_cache` feature.
+
+### 2.0.6 - 2021/02/28
+- Special case for single crosspoint and multicrosspoint with individuals of length 1 interchanging it with a random position of the other individual.
+- Interchange random positions in uniform cross instead of always even ones.
 
 ### 2.0.5 - 2021/02/27
 - Fix uniform cross function with different length individuals.
@@ -48,6 +59,10 @@
 - Many `SurvivalPressure` built-in functions have been added, like `Overpopulation`, `CompetitiveOverpopulation`, `DeterministicOverpopulation`, `ChildrenFightParents`, `ChildrenFightMostSimilar`, etc.
 - The two previous additions allow to search different solutions in different search space areas in order to avoid local suboptimal solutions and find different solutions.
 - Other minor improvements.
+
+### 1.5.2 - 2021/02/28
+- Special case for single crosspoint and multicrosspoint with individuals of length 1 interchanging it with a random position of the other individual.
+- Interchange random positions in uniform cross instead of always even ones.
 
 ### 1.5.1 - 2021/02/27
 - Fix uniform cross function with different length individuals.

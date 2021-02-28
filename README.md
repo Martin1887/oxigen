@@ -183,7 +183,7 @@ The following benchmarks have been created to measure the genetic algorithm func
 running 29 tests
 test benchmarks::bench_cross_multi_point_255inds                                                           ... bench:     895,332 ns/iter (+/- 34,409)
 test benchmarks::bench_cross_single_point_255inds                                                          ... bench:     227,517 ns/iter (+/- 4,802)
-test benchmarks::bench_cross_uniform_255inds                                                               ... bench:      73,370 ns/iter (+/- 9,106)
+test benchmarks::bench_cross_uniform_255inds                                                               ... bench:     304,957 ns/iter (+/- 9,421)
 test benchmarks::bench_distance_255                                                                        ... bench:      41,669 ns/iter (+/- 45)
 test benchmarks::bench_fitness_1024inds                                                                    ... bench:      14,260 ns/iter (+/- 3,789)
 test benchmarks::bench_fitness_age_1024inds                                                                ... bench:      32,495 ns/iter (+/- 5,705)
