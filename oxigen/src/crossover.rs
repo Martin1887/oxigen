@@ -128,50 +128,46 @@ impl<T: PartialEq, G: Genotype<T>> Crossover<T, G> for CrossoverFunctions {
                 (child1, child2)
             }
             UniformCross => {
-                let mut child1 = ind1.clone();
-                child1.from_iter(
-                    ind1.clone()
-                        .into_iter()
-                        .zip(ind2.clone().into_iter())
-                        .enumerate()
-                        .map(|(i, (gen1, gen2))| if i % 2 == 0 { gen1 } else { gen2 }),
-                );
-                let mut child2 = ind2.clone();
-                child2.from_iter(
-                    ind1.clone()
-                        .into_iter()
-                        .zip(ind2.clone().into_iter())
-                        .enumerate()
-                        .map(|(i, (gen1, gen2))| if i % 2 != 0 { gen1 } else { gen2 }),
-                );
-
-                // If one individual is shorter than other the zipped iterator ends in the smallest
-                // one, so the rest of the original individual should be appended to the child
-                let len1 = ind1.iter().len();
-                let len2 = ind2.iter().len();
-                if len1 > len2 {
-                    child1.from_iter(
-                        child1.clone().into_iter().chain(
-                            ind1.clone()
-                                .into_iter()
-                                .enumerate()
-                                .filter(|(i, _el)| *i >= len2)
-                                .map(|(_i, el)| el),
-                        ),
-                    );
-                } else if len1 < len2 {
-                    child2.from_iter(
-                        child2.clone().into_iter().chain(
-                            ind2.clone()
-                                .into_iter()
-                                .enumerate()
-                                .filter(|(i, _el)| *i >= len1)
-                                .map(|(_i, el)| el),
-                        ),
-                    );
+                // Elements that change (only until the shortest individual)
+                // As nth consumes the iterator, besides the global index the
+                // difference with the previous (+ 1 for the taken value) change is used
+                let ind_size = min(ind1.iter().len(), ind2.iter().len());
+                let mut change: Vec<(usize, usize)> = Vec::with_capacity(ind_size);
+                let mut rng = rand::thread_rng();
+                let mut previous = 0;
+                for i in 0..ind_size {
+                    if rng.gen() {
+                        change.push((i, i - previous));
+                        previous = i + 1;
+                    }
                 }
+                if !change.is_empty() {
+                    let mut other = ind2.clone().into_iter();
+                    // change must be cloned to use it with the second child without removed items
+                    let mut change1 = change.clone();
+                    let mut child1 = ind1.clone();
+                    child1.from_iter(child1.clone().into_iter().enumerate().map(|(i, gen)| {
+                        if !change1.is_empty() && change1[0].0 == i {
+                            other.nth(change1.remove(0).1).unwrap()
+                        } else {
+                            gen
+                        }
+                    }));
+                    let mut other = ind1.clone().into_iter();
+                    let mut child2 = ind2.clone();
+                    child2.from_iter(ind2.clone().into_iter().enumerate().map(|(i, gen)| {
+                        if !change.is_empty() && change[0].0 == i {
+                            other.nth(change.remove(0).1).unwrap()
+                        } else {
+                            gen
+                        }
+                    }));
 
-                (child1, child2)
+                    (child1, child2)
+                } else {
+                    // No changes
+                    (ind1.clone(), ind2.clone())
+                }
             } /*
               UniformPartiallyMatched(indpb) => {
                   let size = min(ind1.iter().len(), ind2.iter().len());
