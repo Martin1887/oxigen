@@ -10,6 +10,7 @@ use OxigenStatsFieldFunction;
 use OxigenStatsFields;
 use OxigenStatsSchema;
 
+/// Cached values used to compute statistics.
 pub struct OxigenStatsCache {
     /// The best fitness in the last generations.
     best_fitnesses: Option<Vec<f64>>,

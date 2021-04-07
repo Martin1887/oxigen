@@ -1,3 +1,7 @@
+//! This module provides the definition of the `OxigenStatsFieldFunction` trait
+//! to implement statistics functions and contains the implementation fo the
+//! built-in functions.
+
 use stats_aux::*;
 use OxigenStatsFields;
 use OxigenStatsValues;

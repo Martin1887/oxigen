@@ -1,3 +1,5 @@
+//! This module provides the definition of built-in statistics fields.
+
 /// All statistics options that can be selected for statistics output.
 pub enum OxigenStatsFields {
     /// The progress of the best individual in the last generation.

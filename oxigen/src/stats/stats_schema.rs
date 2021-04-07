@@ -1,3 +1,5 @@
+//! This module provides the statistics schema used to print them.
+
 use OxigenStatsAllFields;
 use OxigenStatsFields;
 use OxigenStatsInstantiatedField;

@@ -1,3 +1,5 @@
+//! This module provides auxiliary functions to compute statistics.
+
 use rayon::prelude::*;
 use OxigenStatsValues;
 
