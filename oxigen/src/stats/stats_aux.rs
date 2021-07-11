@@ -22,21 +22,19 @@ pub fn percentile(histogram: &[f64], decimal_perc: f64) -> f64 {
 }
 
 /// Get the best fitnesses from the cached value or caching them.
-pub fn get_best_fitnesses(mut stats: &mut OxigenStatsValues) -> &[f64] {
-    if stats.cache.best_fitnesses.is_none() {
-        stats.cache.best_fitnesses = Some(compute_best_fitnesses(&stats));
-    }
-    stats.cache.best_fitnesses.as_ref().unwrap()
-}
+pub fn get_best_fitnesses(stats: &OxigenStatsValues) -> Vec<f64> {
+    // poisoning cannot happen
+    let c = stats.cache.read().unwrap();
+    let mut best_fitnesses = c.best_fitnesses.clone();
+    // release the lock
+    drop(c);
 
-/// Get the best fitnesses from the cache or computing them without caching
-/// (not mutable variant).
-fn get_best_fitnesses_not_mutable(stats: &OxigenStatsValues) -> Vec<f64> {
-    if stats.cache.best_fitnesses.is_none() {
-        compute_best_fitnesses(&stats)
-    } else {
-        stats.cache.best_fitnesses.as_ref().unwrap().to_vec()
+    if best_fitnesses.is_none() {
+        best_fitnesses = Some(compute_best_fitnesses(stats));
+        // poisoning cannot happen
+        stats.cache.write().unwrap().best_fitnesses = Some(best_fitnesses.clone().unwrap());
     }
+    best_fitnesses.unwrap()
 }
 
 /// Compute the best fitnesses from immutable stats. Use `get_best_fitnesses`
@@ -56,11 +54,19 @@ pub fn compute_best_fitnesses(stats: &OxigenStatsValues) -> Vec<f64> {
 }
 
 /// Get the worst fitnesses from the cached value or caching them.
-pub fn get_worst_fitnesses(mut stats: &mut OxigenStatsValues) -> &[f64] {
-    if stats.cache.worst_fitnesses.is_none() {
-        stats.cache.worst_fitnesses = Some(compute_worst_fitnesses(&stats));
+pub fn get_worst_fitnesses(stats: &OxigenStatsValues) -> Vec<f64> {
+    // poisoning cannot happen
+    let c = stats.cache.read().unwrap();
+    let mut worst_fitnesses = c.worst_fitnesses.clone();
+    // release the lock
+    drop(c);
+
+    if worst_fitnesses.is_none() {
+        worst_fitnesses = Some(compute_worst_fitnesses(stats));
+        // poisoning cannot happen
+        stats.cache.write().unwrap().worst_fitnesses = Some(worst_fitnesses.clone().unwrap());
     }
-    stats.cache.worst_fitnesses.as_ref().unwrap()
+    worst_fitnesses.unwrap()
 }
 
 /// Compute the worst fitnesses from immutable stats. Use `get_worst_fitnesses`
@@ -80,12 +86,25 @@ pub fn compute_worst_fitnesses(stats: &OxigenStatsValues) -> Vec<f64> {
 }
 
 /// Get the progress of the best individual from the cached value or caching them.
-pub fn get_best_progresses(mut stats: &mut OxigenStatsValues) -> &[f64] {
-    if stats.cache.best_progresses.is_none() {
-        let best = get_best_fitnesses_not_mutable(stats);
-        stats.cache.best_progresses = Some(compute_progresses(&best));
+pub fn get_best_progresses(stats: &OxigenStatsValues) -> Vec<f64> {
+    // poisoning cannot happen
+    let c = stats.cache.read().unwrap();
+    let mut best_progresses = c.best_progresses.clone();
+    let mut best_fitnesses = c.best_fitnesses.clone();
+    // release the lock
+    drop(c);
+
+    if best_progresses.is_none() {
+        if best_fitnesses.is_none() {
+            best_fitnesses = Some(get_best_fitnesses(stats));
+        }
+        best_progresses = Some(compute_progresses(best_fitnesses.as_ref().unwrap()));
+        // poisoning cannot happen
+        let mut c = stats.cache.write().unwrap();
+        c.best_progresses = Some(best_progresses.clone().unwrap());
+        c.best_fitnesses = best_fitnesses;
     }
-    stats.cache.best_progresses.as_ref().unwrap()
+    best_progresses.unwrap()
 }
 
 /// Compute the progress of the elements in `vector`. The resulting vector has
@@ -102,21 +121,19 @@ pub fn compute_progresses(vector: &[f64]) -> Vec<f64> {
 }
 
 /// Get the avg fitness for the last generation from the cached value or caching them.
-pub fn get_avg_fitnesses(mut stats: &mut OxigenStatsValues) -> &[f64] {
-    if stats.cache.avg_fitnesses.is_none() {
-        stats.cache.avg_fitnesses = Some(compute_avg_fitnesses(&stats));
-    }
-    stats.cache.avg_fitnesses.as_ref().unwrap()
-}
+pub fn get_avg_fitnesses(stats: &OxigenStatsValues) -> Vec<f64> {
+    // poisoning cannot happen
+    let c = stats.cache.read().unwrap();
+    let mut avg_fitnesses = c.avg_fitnesses.clone();
+    // release the lock
+    drop(c);
 
-/// Get the avg fitnesses from the cache or computing them without caching
-/// (not mutable variant).
-fn get_avg_fitnesses_not_mutable(stats: &OxigenStatsValues) -> Vec<f64> {
-    if stats.cache.avg_fitnesses.is_none() {
-        compute_avg_fitnesses(&stats)
-    } else {
-        stats.cache.avg_fitnesses.as_ref().unwrap().to_vec()
+    if avg_fitnesses.is_none() {
+        avg_fitnesses = Some(compute_avg_fitnesses(stats));
+        // poisoning cannot happen
+        stats.cache.write().unwrap().avg_fitnesses = Some(avg_fitnesses.clone().unwrap());
     }
+    avg_fitnesses.unwrap()
 }
 
 /// Compute the average fitnesses from immutable stats. Use `get_avg_fitnesses`
@@ -131,38 +148,88 @@ pub fn compute_avg_fitnesses(stats: &OxigenStatsValues) -> Vec<f64> {
 }
 
 /// Get the avg progresses from the cached value or caching them.
-pub fn get_avg_progresses(mut stats: &mut OxigenStatsValues) -> &[f64] {
-    let avg = get_avg_fitnesses_not_mutable(&stats);
-    stats.cache.avg_progresses = Some(compute_progresses(&avg));
-    stats.cache.avg_progresses.as_ref().unwrap()
+pub fn get_avg_progresses(stats: &OxigenStatsValues) -> Vec<f64> {
+    // poisoning cannot happen
+    let c = stats.cache.read().unwrap();
+    let mut avg_progresses = c.avg_progresses.clone();
+    let mut avg_fitnesses = c.avg_fitnesses.clone();
+    // release the lock
+    drop(c);
+
+    if avg_progresses.is_none() {
+        if avg_fitnesses.is_none() {
+            avg_fitnesses = Some(get_avg_fitnesses(stats));
+        }
+        avg_progresses = Some(compute_progresses(avg_fitnesses.as_ref().unwrap()).to_vec());
+        // poisoning cannot happen
+        let mut c = stats.cache.write().unwrap();
+        c.avg_progresses = Some(avg_progresses.clone().unwrap());
+        c.avg_fitnesses = avg_fitnesses;
+    }
+    avg_progresses.unwrap()
 }
 
 /// Get the best progress histogram for the last generations from the cached value or caching them.
-pub fn get_best_progress_histogram(mut stats: &mut OxigenStatsValues) -> &[f64] {
-    if stats.cache.best_progress_histogram.is_none() {
-        stats.cache.best_progress_histogram =
-            Some(compute_histogram(get_best_progresses(&mut stats)));
+pub fn get_best_progress_histogram(stats: &OxigenStatsValues) -> Vec<f64> {
+    // poisoning cannot happen
+    let c = stats.cache.read().unwrap();
+    let mut best_progress_histogram = c.best_progress_histogram.clone();
+    let mut best_progresses = c.best_progresses.clone();
+    // release the lock
+    drop(c);
+
+    if best_progress_histogram.is_none() {
+        if best_progresses.is_none() {
+            best_progresses = Some(get_best_progresses(stats));
+        }
+        best_progress_histogram = Some(compute_histogram(best_progresses.as_ref().unwrap()));
+        // poisoning cannot happen
+        let mut c = stats.cache.write().unwrap();
+        c.best_progress_histogram = Some(best_progress_histogram.clone().unwrap());
+        c.best_progresses = best_progresses;
     }
-    stats.cache.best_progress_histogram.as_ref().unwrap()
+    best_progress_histogram.unwrap()
 }
 
 /// Get the avg progress histogram for the last generations from the cached value or caching them.
-pub fn get_avg_progress_histogram(mut stats: &mut OxigenStatsValues) -> &[f64] {
-    if stats.cache.avg_progress_histogram.is_none() {
-        stats.cache.avg_progress_histogram =
-            Some(compute_histogram(get_avg_progresses(&mut stats)));
+pub fn get_avg_progress_histogram(stats: &OxigenStatsValues) -> Vec<f64> {
+    // poisoning cannot happen
+    let c = stats.cache.read().unwrap();
+    let mut avg_progress_histogram = c.avg_progress_histogram.clone();
+    let mut avg_progresses = c.avg_progresses.clone();
+    // release the lock
+    drop(c);
+
+    if avg_progress_histogram.is_none() {
+        if avg_progresses.is_none() {
+            avg_progresses = Some(get_avg_progresses(stats));
+        }
+        avg_progress_histogram = Some(compute_histogram(avg_progresses.as_ref().unwrap()));
+        // poisoning cannot happen
+        let mut c = stats.cache.write().unwrap();
+        c.avg_progress_histogram = Some(avg_progress_histogram.clone().unwrap());
+        c.avg_progresses = avg_progresses;
     }
-    stats.cache.avg_progress_histogram.as_ref().unwrap()
+    avg_progress_histogram.unwrap()
 }
 
 /// Get the fitness histogram for the last generation from the cached value or caching them.
-pub fn get_fitness_histogram(mut stats: &mut OxigenStatsValues) -> &[f64] {
-    if stats.cache.fitness_histogram.is_none() {
-        stats.cache.fitness_histogram = Some(compute_histogram(
+pub fn get_fitness_histogram(stats: &OxigenStatsValues) -> Vec<f64> {
+    // poisoning cannot happen
+    let c = stats.cache.read().unwrap();
+    let mut fitness_histogram = c.fitness_histogram.clone();
+    // release the lock
+    drop(c);
+
+    if fitness_histogram.is_none() {
+        fitness_histogram = Some(compute_histogram(
             &stats.last_generations.back().unwrap().fitnesses,
         ));
+
+        // poisoning cannot happen
+        stats.cache.write().unwrap().fitness_histogram = Some(fitness_histogram.clone().unwrap());
     }
-    stats.cache.fitness_histogram.as_ref().unwrap()
+    fitness_histogram.unwrap()
 }
 
 /// Compute the histogram from unsorted values. Use a get_*_histogram function

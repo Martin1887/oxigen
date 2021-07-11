@@ -63,7 +63,7 @@ fn test_stats_update() {
     let mut compared_vecdeque = VecDeque::new();
 
     for (i, gen) in generations.iter().enumerate() {
-        stats.values.update(&gen);
+        stats.values.update(gen);
 
         if compared_vecdeque.len() < 2 {
             compared_vecdeque.push_back(OxigenStatsGenerationValues {
@@ -97,10 +97,6 @@ fn test_best_last_progress() {
         OxigenStatsFields::BestLastProgress.function()(&mut stats.values),
         500.0 - 4.0,
     );
-    assert_eq!(
-        OxigenStatsFields::BestLastProgress.uncached_function()(&mut stats.values),
-        500.0 - 4.0,
-    );
 }
 
 #[test]
@@ -111,10 +107,6 @@ fn test_best_progress_avg() {
     let avg = progresses.iter().sum::<f64>() / progresses.len() as f64;
     assert_eq!(
         OxigenStatsFields::BestProgressAvg.function()(&mut stats.values),
-        avg,
-    );
-    assert_eq!(
-        OxigenStatsFields::BestProgressAvg.uncached_function()(&mut stats.values),
         avg,
     );
 }
@@ -130,10 +122,6 @@ fn test_best_progress_std() {
         OxigenStatsFields::BestProgressStd.function()(&mut stats.values),
         std,
     );
-    assert_eq!(
-        OxigenStatsFields::BestProgressStd.uncached_function()(&mut stats.values),
-        std,
-    );
 }
 
 #[test]
@@ -143,10 +131,6 @@ fn test_best_progress_max() {
         OxigenStatsFields::BestProgressMax.function()(&mut stats.values),
         496.0,
     );
-    assert_eq!(
-        OxigenStatsFields::BestProgressMax.uncached_function()(&mut stats.values),
-        496.0,
-    );
 }
 
 #[test]
@@ -154,10 +138,6 @@ fn test_best_progress_min() {
     let mut stats = get_stats();
     assert_eq!(
         OxigenStatsFields::BestProgressMin.function()(&mut stats.values),
-        -6.0,
-    );
-    assert_eq!(
-        OxigenStatsFields::BestProgressMin.uncached_function()(&mut stats.values),
         -6.0,
     );
 }
@@ -171,10 +151,6 @@ fn test_best_progress_p10() {
         OxigenStatsFields::BestProgressP10.function()(&mut stats.values),
         perc,
     );
-    assert_eq!(
-        OxigenStatsFields::BestProgressP10.uncached_function()(&mut stats.values),
-        perc,
-    );
 }
 
 #[test]
@@ -184,10 +160,6 @@ fn test_best_progress_p25() {
     let perc = percentile(&sorted_progresses, 0.25);
     assert_eq!(
         OxigenStatsFields::BestProgressP25.function()(&mut stats.values),
-        perc,
-    );
-    assert_eq!(
-        OxigenStatsFields::BestProgressP25.uncached_function()(&mut stats.values),
         perc,
     );
 }
@@ -201,10 +173,6 @@ fn test_best_progress_median() {
         OxigenStatsFields::BestProgressMedian.function()(&mut stats.values),
         perc,
     );
-    assert_eq!(
-        OxigenStatsFields::BestProgressMedian.uncached_function()(&mut stats.values),
-        perc,
-    );
 }
 
 #[test]
@@ -214,10 +182,6 @@ fn test_best_progress_p75() {
     let perc = percentile(&sorted_progresses, 0.75);
     assert_eq!(
         OxigenStatsFields::BestProgressP75.function()(&mut stats.values),
-        perc,
-    );
-    assert_eq!(
-        OxigenStatsFields::BestProgressP75.uncached_function()(&mut stats.values),
         perc,
     );
 }
@@ -230,10 +194,6 @@ fn test_best_progress_p90() {
     assert_eq!(
         OxigenStatsFields::BestProgressP90.function()(&mut stats.values),
         perc,
-    );
-    assert_eq!(
-        OxigenStatsFields::BestProgressP90.uncached_function()(&mut stats.values),
-        perc
     );
 }
 
@@ -250,10 +210,6 @@ fn test_avg_last_progress() {
         OxigenStatsFields::AvgLastProgress.function()(&mut stats.values),
         *progresses.last().unwrap(),
     );
-    assert_eq!(
-        OxigenStatsFields::AvgLastProgress.uncached_function()(&mut stats.values),
-        *progresses.last().unwrap(),
-    );
 }
 
 #[test]
@@ -264,10 +220,6 @@ fn test_avg_progress_avg() {
     let avg = progresses.iter().sum::<f64>() / progresses.len() as f64;
     assert_eq!(
         OxigenStatsFields::AvgProgressAvg.function()(&mut stats.values),
-        avg,
-    );
-    assert_eq!(
-        OxigenStatsFields::AvgProgressAvg.uncached_function()(&mut stats.values),
         avg,
     );
 }
@@ -283,10 +235,6 @@ fn test_avg_progress_std() {
         OxigenStatsFields::AvgProgressStd.function()(&mut stats.values),
         std,
     );
-    assert_eq!(
-        OxigenStatsFields::AvgProgressStd.uncached_function()(&mut stats.values),
-        std,
-    );
 }
 
 #[test]
@@ -296,10 +244,6 @@ fn test_avg_progress_max() {
         OxigenStatsFields::AvgProgressMax.function()(&mut stats.values),
         129.25,
     );
-    assert_eq!(
-        OxigenStatsFields::AvgProgressMax.uncached_function()(&mut stats.values),
-        129.25,
-    );
 }
 
 #[test]
@@ -307,10 +251,6 @@ fn test_avg_progress_min() {
     let mut stats = get_stats();
     assert_eq!(
         OxigenStatsFields::AvgProgressMin.function()(&mut stats.values),
-        -4.75,
-    );
-    assert_eq!(
-        OxigenStatsFields::AvgProgressMin.uncached_function()(&mut stats.values),
         -4.75,
     );
 }
@@ -324,10 +264,6 @@ fn test_avg_progress_p10() {
         OxigenStatsFields::AvgProgressP10.function()(&mut stats.values),
         perc,
     );
-    assert_eq!(
-        OxigenStatsFields::AvgProgressP10.uncached_function()(&mut stats.values),
-        perc,
-    );
 }
 
 #[test]
@@ -337,10 +273,6 @@ fn test_avg_progress_p25() {
     let perc = percentile(&sorted_progresses, 0.25);
     assert_eq!(
         OxigenStatsFields::AvgProgressP25.function()(&mut stats.values),
-        perc,
-    );
-    assert_eq!(
-        OxigenStatsFields::AvgProgressP25.uncached_function()(&mut stats.values),
         perc,
     );
 }
@@ -354,10 +286,6 @@ fn test_avg_progress_median() {
         OxigenStatsFields::AvgProgressMedian.function()(&mut stats.values),
         perc,
     );
-    assert_eq!(
-        OxigenStatsFields::AvgProgressMedian.uncached_function()(&mut stats.values),
-        perc,
-    );
 }
 
 #[test]
@@ -367,10 +295,6 @@ fn test_avg_progress_p75() {
     let perc = percentile(&sorted_progresses, 0.75);
     assert_eq!(
         OxigenStatsFields::AvgProgressP75.function()(&mut stats.values),
-        perc,
-    );
-    assert_eq!(
-        OxigenStatsFields::AvgProgressP75.uncached_function()(&mut stats.values),
         perc,
     );
 }
@@ -383,10 +307,6 @@ fn test_avg_progress_p90() {
     assert_eq!(
         OxigenStatsFields::AvgProgressP90.function()(&mut stats.values),
         perc,
-    );
-    assert_eq!(
-        OxigenStatsFields::AvgProgressP90.uncached_function()(&mut stats.values),
-        perc
     );
 }
 
@@ -401,10 +321,6 @@ fn test_fitness_avg() {
         OxigenStatsFields::FitnessAvg.function()(&mut stats.values),
         128.5,
     );
-    assert_eq!(
-        OxigenStatsFields::FitnessAvg.uncached_function()(&mut stats.values),
-        128.5,
-    );
 }
 
 #[test]
@@ -417,10 +333,6 @@ fn test_fitness_std() {
         OxigenStatsFields::FitnessStd.function()(&mut stats.values),
         std,
     );
-    assert_eq!(
-        OxigenStatsFields::FitnessStd.uncached_function()(&mut stats.values),
-        std,
-    );
 }
 
 #[test]
@@ -430,10 +342,6 @@ fn test_fitness_max() {
         OxigenStatsFields::FitnessMax.function()(&mut stats.values),
         500.0,
     );
-    assert_eq!(
-        OxigenStatsFields::FitnessMax.uncached_function()(&mut stats.values),
-        500.0,
-    );
 }
 
 #[test]
@@ -441,10 +349,6 @@ fn test_fitness_min() {
     let mut stats = get_stats();
     assert_eq!(
         OxigenStatsFields::FitnessMin.function()(&mut stats.values),
-        2.0,
-    );
-    assert_eq!(
-        OxigenStatsFields::FitnessMin.uncached_function()(&mut stats.values),
         2.0,
     );
 }
@@ -458,10 +362,6 @@ fn test_fitness_p10() {
         OxigenStatsFields::FitnessP10.function()(&mut stats.values),
         perc,
     );
-    assert_eq!(
-        OxigenStatsFields::FitnessP10.uncached_function()(&mut stats.values),
-        perc,
-    );
 }
 
 #[test]
@@ -471,10 +371,6 @@ fn test_fitness_p25() {
     let perc = percentile(&sorted_fitnesses, 0.25);
     assert_eq!(
         OxigenStatsFields::FitnessP25.function()(&mut stats.values),
-        perc,
-    );
-    assert_eq!(
-        OxigenStatsFields::FitnessP25.uncached_function()(&mut stats.values),
         perc,
     );
 }
@@ -488,10 +384,6 @@ fn test_fitness_median() {
         OxigenStatsFields::FitnessMedian.function()(&mut stats.values),
         perc,
     );
-    assert_eq!(
-        OxigenStatsFields::FitnessMedian.uncached_function()(&mut stats.values),
-        perc,
-    );
 }
 
 #[test]
@@ -503,10 +395,6 @@ fn test_fitness_p75() {
         OxigenStatsFields::FitnessP75.function()(&mut stats.values),
         perc,
     );
-    assert_eq!(
-        OxigenStatsFields::FitnessP75.uncached_function()(&mut stats.values),
-        perc,
-    );
 }
 
 #[test]
@@ -516,10 +404,6 @@ fn test_fitness_p90() {
     let perc = percentile(&sorted_fitnesses, 0.90);
     assert_eq!(
         OxigenStatsFields::FitnessP90.function()(&mut stats.values),
-        perc,
-    );
-    assert_eq!(
-        OxigenStatsFields::FitnessP90.uncached_function()(&mut stats.values),
         perc,
     );
 }

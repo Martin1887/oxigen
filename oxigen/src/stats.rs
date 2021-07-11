@@ -6,6 +6,7 @@ pub mod stats_impl;
 pub mod stats_schema;
 
 use std::collections::vec_deque::VecDeque;
+use std::sync::RwLock;
 use OxigenStatsFieldFunction;
 use OxigenStatsFields;
 use OxigenStatsSchema;
@@ -73,7 +74,7 @@ pub struct OxigenStatsValues {
     /// TODO: check when the exact capacity is stabilized or think in using another struct.
     pub(crate) capacity: usize,
     /// Cache statistics that are cleared in each update.
-    pub(crate) cache: OxigenStatsCache,
+    pub(crate) cache: RwLock<OxigenStatsCache>,
 }
 
 impl OxigenStatsValues {
@@ -82,7 +83,7 @@ impl OxigenStatsValues {
         OxigenStatsValues {
             last_generations: VecDeque::with_capacity(generations_stats),
             capacity: generations_stats,
-            cache: OxigenStatsCache::new(),
+            cache: RwLock::new(OxigenStatsCache::new()),
         }
     }
     /// Update the fitness and progress values in each generation.
@@ -103,8 +104,9 @@ impl OxigenStatsValues {
             self.last_generations.push_back(values);
         }
 
-        // clear cache
-        self.cache = OxigenStatsCache::new();
+        // clear cache, poisoning cannot happen
+        let mut c = self.cache.write().unwrap();
+        *c = OxigenStatsCache::new();
     }
 }
 
@@ -225,15 +227,9 @@ impl OxigenStatsAllFields {
     }
 }
 impl OxigenStatsFieldFunction for OxigenStatsAllFields {
-    fn function(&self) -> &dyn Fn(&mut OxigenStatsValues) -> f64 {
+    fn function(&self) -> &dyn Fn(&OxigenStatsValues) -> f64 {
         match self {
             OxigenStatsAllFields::StatsField(field) => field.function(),
-            _ => panic!("The function cannot be applied over generation or solutions!"),
-        }
-    }
-    fn uncached_function(&self) -> &dyn Fn(&OxigenStatsValues) -> f64 {
-        match self {
-            OxigenStatsAllFields::StatsField(field) => field.uncached_function(),
             _ => panic!("The function cannot be applied over generation or solutions!"),
         }
     }

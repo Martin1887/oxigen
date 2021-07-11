@@ -120,16 +120,10 @@ impl Genotype<u8> for QueensBoard {
 // Example of custom stats field: Avg progress max - min
 struct AvgProgressMaxMinusMin;
 impl OxigenStatsFieldFunction for AvgProgressMaxMinusMin {
-    fn function(&self) -> &dyn Fn(&mut OxigenStatsValues) -> f64 {
-        &|mut stats: &mut OxigenStatsValues| {
-            OxigenStatsFields::AvgProgressMax.function()(&mut stats)
-                - OxigenStatsFields::AvgProgressMin.function()(&mut stats)
-        }
-    }
-    fn uncached_function(&self) -> &dyn Fn(&OxigenStatsValues) -> f64 {
+    fn function(&self) -> &dyn Fn(&OxigenStatsValues) -> f64 {
         &|stats: &OxigenStatsValues| {
-            OxigenStatsFields::AvgProgressMax.uncached_function()(&stats)
-                - OxigenStatsFields::AvgProgressMin.uncached_function()(&stats)
+            OxigenStatsFields::AvgProgressMax.function()(stats)
+                - OxigenStatsFields::AvgProgressMin.function()(stats)
         }
     }
 }
