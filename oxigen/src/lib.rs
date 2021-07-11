@@ -571,7 +571,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
             if indwf
                 .ind
                 .is_solution(indwf.fitness.unwrap().original_fitness)
-                && Self::not_found_yet_solution(&solutions, &indwf.ind)
+                && Self::not_found_yet_solution(solutions, &indwf.ind)
             {
                 solutions.push(indwf.ind.clone());
             }
@@ -689,10 +689,7 @@ impl<T: PartialEq + Send + Sync, Ind: Genotype<T>> GeneticExecution<T, Ind> {
     }
 
     fn survival_pressure_kill(&mut self, parents_children: &[Reproduction]) {
-        self.survival_pressure.kill(
-            self.population_size,
-            &mut self.population,
-            &parents_children,
-        );
+        self.survival_pressure
+            .kill(self.population_size, &mut self.population, parents_children);
     }
 }

@@ -25,7 +25,7 @@ pub trait Genotype<T: PartialEq>: Display + Clone + Send + Sync {
     fn into_iter(self) -> IntoIter<T>;
 
     /// Set the genes of the individual from an iterator.
-    fn from_iter<I: Iterator<Item = T>>(&mut self, I);
+    fn from_iter<I: Iterator<Item = T>>(&mut self, _: I);
 
     /// Randomly initializes an individual.
     fn generate(size: &Self::Environment) -> Self;
